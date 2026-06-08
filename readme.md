@@ -21,15 +21,14 @@ Indices are derived by tracking three anatomical landmarks across TEE frames:
 
 ## Pipelines
 
-> ⚠️ **Note:** Only the `twod` pipeline is currently functional. The `2D+T` pipeline is not working — likely due to insufficient dataset variability for spatiotemporal analysis, or a potential bug. Further investigation is needed.
-
 ### `twod` ✅
 Individual 2D TEE frames are fed into a model that predicts and tracks the three target landmarks per frame, from which clinical indices are subsequently calculated.
 
 For a detailed explanation of how this pipeline works, see [`./twod/README.md`](./twod/README.md).
 
-### `2D+T` ⚠️ (not working)
-Sequences of 64 consecutive frames are fed into a 3D spatiotemporal model, which outputs all three landmark coordinates for each frame simultaneously.
+### `2D+T` ✅ (Tracking, prototype)
+In this pipeline, a 3d model is fed with sequences of N frames, and it tracks the landmarks in the whole time window at the same time. 
+The model is trained to reproduce heatmaps containing a "gaussian" centered on the ground truth coordinates. The coordinates are then extracted as the coordinates of the center of mass or of the max value of the output heatmaps. In order for the training to be stable, the radius of the gaussian starts at high values, and then is reduced gradually during the training. The obtained results are similar to the twod pipeline, but it has not been explored much.
 
 ## Getting Started
 
