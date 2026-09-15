@@ -4,6 +4,11 @@ import numpy as np
 import os
 from torchvision import transforms as T
 from torchvision.transforms import v2 as T
+import h5py
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 from twod.dataloader.preprocessing import preprocess_images
 from twod.augmentations.img_augm import apply_transform
@@ -23,11 +28,16 @@ class KeypointDataset(Dataset):
             transform (callable, optional): Image transformations.
             filter (bool, optional): If True, removes images with keypoints (0,0,0,0).
         """
-
-        file = np.load(numpy_dataset)
-        images = file['images']
-        keypoints = file['keypoints']
-
+        path = os.getenv("DATASET_PATH")
+        with h5py.File(path, "r") as data:
+            images = data["frames"][()]
+            keypoints = data["annotations"][()]
+        self.images = images
+        self.keypoints = keypoints
+        self.transform = transform
+        self.preprocessing = preprocessing
+        self.device = device
+        self.model_type = model_type
         if filter:
             # Finding unannotated keypoints
             unannotated_indices = np.where(np.all(keypoints == 0, axis=1))[0]
@@ -77,11 +87,13 @@ class KeypointDataset(Dataset):
 
 
 if __name__ == "__main__":
-    dataset = 'D:/mmissana/data/dataset/train.npz'
-    keypoint_dataset = KeypointDataset(dataset, filter=True)
+    path = os.getenv("DATASET_PATH")
+    with h5py.File(path, "r") as data:
+        images = data["frames"][()]
+        keypoints = data["annotations"][()]
+    keypoint_dataset = KeypointDataset(images=images, keypoints=keypoints, filter=True)
+
     print(f"Number of images: {len(keypoint_dataset)}")
     print(f"Image shape: {keypoint_dataset[0][0].shape}")
     print(f"Keypoint shape: {keypoint_dataset[0][1].shape}")
     print(f"Keypoint coordinates: {keypoint_dataset[0][1]}")
-
-    

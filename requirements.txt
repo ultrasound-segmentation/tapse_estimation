@@ -9,3 +9,4 @@ h5py
 wandb
 matplotlib
 torchinfo
+python-dotenv

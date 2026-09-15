@@ -15,7 +15,8 @@ results_video.mp4
 2d/model_weights/
 2d/runs/  
 2d+memory/runs/     
-2d+t/runs/   
+2d+t/runs/
+.env
 
 *.pth
 *.pdf
