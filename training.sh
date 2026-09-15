@@ -1,12 +1,12 @@
 #!/bin/sh
-#SBATCH --job-name=test_run
+#SBATCH --job-name=training_run
 #SBATCH --time=0-00:15:00         # format: D-HH:MM:SS
 
 #SBATCH --partition=GPUQ          # Asking for a GPU
 #SBATCH --gres=gpu:1             # Setting the number of GPUs to 1
 #SBATCH --mem=16G                 # Asking for 16GB RAM
 #SBATCH --nodes=1
-#SBATCH --output=logs/output1.txt      # Specifying 'stdout'
+#SBATCH --output=logs/training.txt      # Specifying 'stdout'
 
 
 
@@ -15,6 +15,7 @@ cd ${WORKDIR}
 export PYTHONPATH="/cluster/home/$USER/tapse_estimation:$PYTHONPATH"
 echo "Running from this directory: $SLURM_SUBMIT_DIR"
 echo "Name of job: $SLURM_JOB_NAME"
+echo "Job started at:  $(date): "
 echo "ID of job: $SLURM_JOB_ID"
 echo "The job was run on these nodes: $SLURM_JOB_NODELIST"
 
