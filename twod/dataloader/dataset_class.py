@@ -6,21 +6,35 @@ from torchvision import transforms as T
 from torchvision.transforms import v2 as T
 import h5py
 from dotenv import load_dotenv
+from pathlib import Path
 
 load_dotenv()
 
 
-from twod.dataloader.preprocessing import preprocess_images
+from twod.dataloader.preprocessing import (
+    preprocess_images,
+    resize_or_crop_image_np,
+)
 from twod.augmentations.img_augm import apply_transform
 from utils.plot import visualize_image
 
-# this file defines a custom PyTorch Dataset class called KeypointDataset for 
-#loading and preprocessing image-keypoint pairs from a NumPy .npz file. It's designed 
-#for keypoint detection, so it returns the images, coupled with the corresponding keypoints. 
+# this file defines a custom PyTorch Dataset class called KeypointDataset for
+# loading and preprocessing image-keypoint pairs from a NumPy .npz file. It's designed
+# for keypoint detection, so it returns the images, coupled with the corresponding keypoints.
 # It also performs image augmentations
 
+
 class KeypointDataset(Dataset):
-    def __init__(self, numpy_dataset, transform=None, filter=False, preprocessing= False, device='cpu', model_type = 'U-Net'):
+    def __init__(
+        self,
+        images=None,
+        keypoints=None,
+        transform=None,
+        filter=False,
+        preprocessing=False,
+        device="cpu",
+        model_type="U-Net",
+    ):
         """
         Args:
             images (list of np.array): List of grayscale images as numpy arrays.
@@ -89,13 +103,14 @@ class KeypointDataset(Dataset):
         print(f"Keypoints shape: {keypoints.shape}")
 
         if filter:
-            # Finding unannotated keypoints
             unannotated_indices = np.where(np.all(keypoints == 0, axis=1))[0]
 
             # Finding out-of-bounds keypoints
             out_of_bounds_indices = np.where(
-                (keypoints[:, 0] < 0) | (keypoints[:, 0] > 256) |
-                (keypoints[:, 1] < 0) | (keypoints[:, 1] > 256)
+                (keypoints[:, 0] < 0)
+                | (keypoints[:, 0] > 256)
+                | (keypoints[:, 1] < 0)
+                | (keypoints[:, 1] > 256)
             )[0]
 
             # Combining both cases

@@ -7,11 +7,10 @@ import random
 import os
 import wandb  # Import wandb
 from tqdm import tqdm  # Import tqdm for progress bar
-from torchsummary import summary
+from torchinfo import summary
 
 from dataloader.dataset_class import KeypointDataset
 from losses.distances import OrderedDistanceLoss, GaussianKeypointLoss
-from models.tasken_unet import UNet
 from models.weights_initialization import initialize_weights
 from models.models import EncoderDecoder_3d, Unet as monai_UNet, ResNet50Regression, ResNet34Regression, ResNet18Regression, SwinUNETR, ResNeXt50Regression
 from models.improved_unet import ImprovedUnet
