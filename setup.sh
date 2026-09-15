@@ -1,6 +1,4 @@
 echo "Starting setup script!"
-
-module load Anaconda3/2025.06-1
 module load Python/3.12.3-GCCcore-13.3.0
 echo "Loaded Python"
 
