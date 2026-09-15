@@ -35,8 +35,7 @@ The model is trained to reproduce heatmaps containing a "gaussian" centered on t
 ```bash
 git clone https://github.com/MatteoMissana/tapse_estimation
 cd tapse_estimation
-pip install -r requirements.txt
-pip install -e .
+. setup.sh
 ```
 
 Then refer to [`./twod/README.md`](./twod/README.md) for pipeline-specific instructions.
