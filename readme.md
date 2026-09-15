@@ -41,6 +41,12 @@ pip install -e .
 
 Then refer to [`./twod/README.md`](./twod/README.md) for pipeline-specific instructions.
 
+### .env file
+To start, you should add a `.env` file. Here you should add
+```
+DATASET_PATH=<path to directory with all subdirectories with .h5 files>
+```
+
 ## Demo (click on it for the video)
 
 [![Demo Video](https://img.youtube.com/vi/IUViyJUNPxE/0.jpg)](https://youtu.be/IUViyJUNPxE)
