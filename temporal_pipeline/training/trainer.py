@@ -5,11 +5,14 @@ from pathlib import Path
 from tqdm import tqdm
 import wandb
 
-from temporal_pipeline.postprocessing.coordinates_from_heatmaps import center_of_mass_3d, argmax_3d
+from temporal_pipeline.postprocessing.coordinates_from_heatmaps import (
+    center_of_mass_3d,
+    argmax_3d,
+)
 from temporal_pipeline.utils.plot import save_image, visualize_image
 
+"""class with all the helpers for training"""
 
-'''class with all the helpers for training'''
 
 class Trainer:
     def __init__(
@@ -21,7 +24,7 @@ class Trainer:
         device: str | torch.device = "cpu",
         scheduler: torch.optim.lr_scheduler._LRScheduler | None = None,
         checkpoint_dir: str = "checkpoints",
-        model_type: str = "3D_UNet", # just to understand how outputs should be processed
+        model_type: str = "3D_UNet",  # just to understand how outputs should be processed
         wandb: bool = False,
         heatmap_training: bool = False,
         train_dataset=None,
@@ -53,8 +56,14 @@ class Trainer:
         self.best_val_loss = float("inf")
 
         # define the parameters to keep track of during training
-        self.history = {"train_loss": [], "val_loss": [], "learning_rate": [], 
-        "train_distance_loss": [], "train_motion_loss": [], "val_motion_loss": []}
+        self.history = {
+            "train_loss": [],
+            "val_loss": [],
+            "learning_rate": [],
+            "train_distance_loss": [],
+            "train_motion_loss": [],
+            "val_motion_loss": [],
+        }
 
     # ------------------------------------------------------------------
     # Core loop
@@ -101,13 +110,17 @@ class Trainer:
                 self._adjust_heatmap_radius(epoch)
 
             # calculate losses with a progress bar inside the training loop
-            train_losses = self._train_one_epoch(train_loader, epoch=epoch, total_epochs=epochs)
+            train_losses = self._train_one_epoch(
+                train_loader, epoch=epoch, total_epochs=epochs
+            )
 
             val_loss = self._evaluate(val_loader)
 
             if self.scheduler:
                 # ReduceLROnPlateau expects a metric; others don't
-                if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                if isinstance(
+                    self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau
+                ):
                     self.scheduler.step(val_loss)
                 else:
                     self.scheduler.step()
@@ -134,14 +147,16 @@ class Trainer:
 
             # save logs on wandb when enabled
             if self.wandb and wandb.run is not None:
-                wandb.log({
-                    "epoch": epoch,
-                    "train_loss": train_losses["loss"],
-                    "val_loss": val_loss,
-                    "learning_rate": lr,
-                    "train_distance_loss": train_losses["dist"],
-                    "train_motion_loss": train_losses["motion"]
-                })
+                wandb.log(
+                    {
+                        "epoch": epoch,
+                        "train_loss": train_losses["loss"],
+                        "val_loss": val_loss,
+                        "learning_rate": lr,
+                        "train_distance_loss": train_losses["dist"],
+                        "train_motion_loss": train_losses["motion"],
+                    }
+                )
 
             flag = " ✓" if improved else ""
             print(
@@ -155,7 +170,7 @@ class Trainer:
                 print(f"Early stopping triggered after {epoch} epochs.")
                 break
 
-        # load the best model after training 
+        # load the best model after training
         self._load_best_checkpoint()
         return self.history
 
@@ -163,7 +178,9 @@ class Trainer:
     # Train / eval steps
     # ------------------------------------------------------------------
 
-    def _train_one_epoch(self, loader: DataLoader, epoch: int, total_epochs: int) -> dict:
+    def _train_one_epoch(
+        self, loader: DataLoader, epoch: int, total_epochs: int
+    ) -> dict:
         self.model.train()
         # total loss
         running_loss = 0.0
@@ -183,14 +200,18 @@ class Trainer:
                 #     img = images[0, 0, i].cpu().numpy()
                 #     mask = masks[0, 1, i].cpu().numpy()
                 #     visualize_image(img + mask)
-            
 
                 # Forward pass
                 outputs = self.model(images)
 
-                if self.model_type in ["3D_UNet", "echocoder"] and not self.heatmap_training:
+                if (
+                    self.model_type in ["3D_UNet", "echocoder"]
+                    and not self.heatmap_training
+                ):
                     # Compute center of mass for output masks
-                    com_tensor = center_of_mass_3d(outputs, device=self.device, normalize=False).to(self.device)
+                    com_tensor = center_of_mass_3d(
+                        outputs, device=self.device, normalize=False
+                    ).to(self.device)
                     # Compute the loss
                     loss, loss_breakdown = self.train_loss_fn(com_tensor, masks)
                 elif self.heatmap_training:
@@ -198,8 +219,9 @@ class Trainer:
                     loss, loss_breakdown = self.train_loss_fn(outputs, masks)
                     print(loss_breakdown)
                 else:
-                    raise Exception("you found a bug? This should never happen, signal it to the developers please")# this should never happen
-                    
+                    raise Exception(
+                        "you found a bug? This should never happen, signal it to the developers please"
+                    )  # this should never happen
 
                 # Backward pass
                 loss.backward()
@@ -208,8 +230,8 @@ class Trainer:
 
                 # save total decomposed loss so as to log it into wandb
                 if not self.heatmap_training:
-                    train_dist += loss_breakdown['dist']
-                    train_motion += loss_breakdown['motion']
+                    train_dist += loss_breakdown["dist"]
+                    train_motion += loss_breakdown["motion"]
 
                 pbar.set_postfix(loss=loss.item(), refresh=True)
 
@@ -243,15 +265,19 @@ class Trainer:
             #         img = images[0, 0, i].cpu().numpy()
             #         mask = masks[0, 1, i].cpu().numpy()
             #         visualize_image(img + mask)
-            
+
             # compute outputs
             outputs = self.model(images)
-            
 
-            if self.model_type in ["3D_UNet", "echocoder"] and not self.heatmap_training:
+            if (
+                self.model_type in ["3D_UNet", "echocoder"]
+                and not self.heatmap_training
+            ):
                 # Compute center of mass for output masks
-                com_tensor = center_of_mass_3d(outputs, device=self.device, normalize=False).to(self.device)
-                # calculate the loss: for the validation I use the distance loss, that's 
+                com_tensor = center_of_mass_3d(
+                    outputs, device=self.device, normalize=False
+                ).to(self.device)
+                # calculate the loss: for the validation I use the distance loss, that's
                 # what I want to minimize
                 loss, _ = self.val_loss_fn(com_tensor, masks)
             elif self.heatmap_training:
@@ -259,8 +285,9 @@ class Trainer:
                 outputs = argmax_3d(outputs, device=self.device)
                 loss, _ = self.val_loss_fn(outputs, masks)
             else:
-                raise Exception("you found a bug? This should never happen, signal it to the developers please")# this should never happen
-            
+                raise Exception(
+                    "you found a bug? This should never happen, signal it to the developers please"
+                )  # this should never happen
 
             total_loss += loss.item()
 
@@ -288,7 +315,9 @@ class Trainer:
         if path.exists():
             state = torch.load(path, map_location=self.device)
             self.model.load_state_dict(state["model_state_dict"])
-            print(f"Loaded best checkpoint (epoch {state['epoch']}, val loss {state['val_loss']:.4f})")
+            print(
+                f"Loaded best checkpoint (epoch {state['epoch']}, val loss {state['val_loss']:.4f})"
+            )
 
 
 # ----------------------------------------------------------------------
@@ -304,14 +333,16 @@ if __name__ == "__main__":
 
     split = 800
     train_ds = TensorDataset(X[:split], y[:split])
-    val_ds   = TensorDataset(X[split:], y[split:])
+    val_ds = TensorDataset(X[split:], y[split:])
     train_loader = DataLoader(train_ds, batch_size=32, shuffle=True)
-    val_loader   = DataLoader(val_ds,   batch_size=64)
+    val_loader = DataLoader(val_ds, batch_size=64)
 
     # --- Model ---
     model = nn.Sequential(
-        nn.Linear(16, 64), nn.ReLU(),
-        nn.Linear(64, 32), nn.ReLU(),
+        nn.Linear(16, 64),
+        nn.ReLU(),
+        nn.Linear(64, 32),
+        nn.ReLU(),
         nn.Linear(32, 2),
     )
 

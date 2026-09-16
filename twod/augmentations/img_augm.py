@@ -1,22 +1,29 @@
 import torch
 import torchvision.transforms.functional as TF
 
+
 def random_h_flip(image, keypoints, p=0.5):
     """Randomly flips the image horizontally and adjusts keypoints."""
     if torch.rand(1).item() < p:
         image = TF.hflip(image)  # Optimized horizontal flip
-        keypoints[:, 0] = image.shape[-1] - keypoints[:, 0]  # Correct x-coordinate adjustment
+        keypoints[:, 0] = (
+            image.shape[-1] - keypoints[:, 0]
+        )  # Correct x-coordinate adjustment
     return image, keypoints
 
-def adjust_brightness_contrast(image, brightness_range=(0.8, 1.2), contrast_range=(0.7, 1.3)):
+
+def adjust_brightness_contrast(
+    image, brightness_range=(0.8, 1.2), contrast_range=(0.7, 1.3)
+):
     """Adjusts brightness and contrast with given ranges."""
     brightness_factor = torch.empty(1).uniform_(*brightness_range).item()
     contrast_factor = torch.empty(1).uniform_(*contrast_range).item()
-    
+
     image = TF.adjust_brightness(image, brightness_factor)
     image = TF.adjust_contrast(image, contrast_factor)
-    
+
     return image
+
 
 def random_rotate(image, keypoints, degrees=(-30, 30), p=0.5):
     """Randomly rotates the image and adjusts keypoints."""
@@ -32,10 +39,12 @@ def random_rotate(image, keypoints, degrees=(-30, 30), p=0.5):
         angle_rad = torch.deg2rad(torch.tensor(angle))
 
         # Define rotation matrix
-        rotation_matrix = torch.tensor([
-            [torch.cos(-angle_rad), -torch.sin(-angle_rad)],
-            [torch.sin(-angle_rad), torch.cos(-angle_rad)]
-        ])
+        rotation_matrix = torch.tensor(
+            [
+                [torch.cos(-angle_rad), -torch.sin(-angle_rad)],
+                [torch.sin(-angle_rad), torch.cos(-angle_rad)],
+            ]
+        )
 
         # Ensure keypoints shape is (N, 2) before transformation
         keypoints = keypoints.view(-1, 2)  # Make sure it's (num_keypoints, 2)
@@ -45,13 +54,13 @@ def random_rotate(image, keypoints, degrees=(-30, 30), p=0.5):
 
     return image, keypoints.view_as(keypoints)  # Restore original shape
 
-def random_crop(image, keypoints, crop_size = 220, p=0.5):
+
+def random_crop(image, keypoints, crop_size=220, p=0.5):
     """Randomly crops the image, resizes it back, and adjusts keypoints accordingly."""
     if torch.rand(1).item() < p:
         h, w = image.shape[-2], image.shape[-1]
         crop_h = torch.randint(crop_size, image.shape[-2] + 1, (1,)).item()
         crop_w = torch.randint(crop_size, image.shape[-1] + 1, (1,)).item()
-
 
         if h <= crop_h or w <= crop_w:
             return image, keypoints  # Skip cropping if image is too small
@@ -64,7 +73,7 @@ def random_crop(image, keypoints, crop_size = 220, p=0.5):
         image = TF.crop(image, top, left, crop_h, crop_w)
 
         # Resize image back to original size
-        image = TF.resize(image, (h, w), antialias = True)
+        image = TF.resize(image, (h, w), antialias=True)
 
         # Adjust keypoints
         keypoints = keypoints.view(-1, 2)  # Ensure keypoints are in (N, 2) format
@@ -79,7 +88,7 @@ def random_crop(image, keypoints, crop_size = 220, p=0.5):
         # mask = (keypoints[:, 0] >= 0) & (keypoints[:, 0] < w) & \
         #        (keypoints[:, 1] >= 0) & (keypoints[:, 1] < h)
         # keypoints = keypoints[mask]
-    
+
     return image, keypoints.view(-1, 2)
 
 
@@ -88,42 +97,55 @@ def add_gaussian_noise(image, std=0.02):
     noise = torch.normal(0, std, size=image.shape, device=image.device)
     return torch.clamp(image + noise, 0.0, 1.0)
 
-def apply_transform(image: torch.Tensor, keypoints: torch.Tensor, version: str = '0'):
+
+def apply_transform(image: torch.Tensor, keypoints: torch.Tensor, version: str = "0"):
     """Apply transformations to an image and its keypoints."""
-    if version == '0':
+    if version == "0":
         pass
-    
-    elif version == '1':
+
+    elif version == "1":
         image, keypoints = random_h_flip(image, keypoints, p=0.5)
         image = adjust_brightness_contrast(image, contrast_range=(0.8, 1.2))
         image = add_gaussian_noise(image)
 
-    elif version == '2':
-        image = adjust_brightness_contrast(image, brightness_range=(0.7, 1.3), contrast_range=(0.7, 1.3))
+    elif version == "2":
+        image = adjust_brightness_contrast(
+            image, brightness_range=(0.7, 1.3), contrast_range=(0.7, 1.3)
+        )
         image = add_gaussian_noise(image)
-    
-    elif version == '3':
-        image = adjust_brightness_contrast(image, brightness_range=(0.5, 1.5), contrast_range=(0.5, 1.5))
-        image = add_gaussian_noise(image, std = 0.08)
-    elif version == '4':
-        image = adjust_brightness_contrast(image, brightness_range=(0.5, 1.5), contrast_range=(0.5, 1.5))
-        image = add_gaussian_noise(image, std = 0.08)
+
+    elif version == "3":
+        image = adjust_brightness_contrast(
+            image, brightness_range=(0.5, 1.5), contrast_range=(0.5, 1.5)
+        )
+        image = add_gaussian_noise(image, std=0.08)
+    elif version == "4":
+        image = adjust_brightness_contrast(
+            image, brightness_range=(0.5, 1.5), contrast_range=(0.5, 1.5)
+        )
+        image = add_gaussian_noise(image, std=0.08)
         image, keypoints = random_rotate(image, keypoints, p=1)
-    elif version == '5':
-        image = adjust_brightness_contrast(image, brightness_range=(0.6, 1.4), contrast_range=(0.6, 1.4))
-        image = add_gaussian_noise(image, std = 0.06)
-        image, keypoints = random_rotate(image, keypoints, p=.6)
-    elif version == '6':
-        image = adjust_brightness_contrast(image, brightness_range=(0.6, 1.4), contrast_range=(0.6, 1.4))
-        image = add_gaussian_noise(image, std = 0.06)
-        image, keypoints = random_rotate(image, keypoints, p=.5)
-        image, keypoints = random_crop(image, keypoints, crop_size=220, p=.6)
-    elif version == '7': # this one was used for AutoRV training 
-        image = adjust_brightness_contrast(image, brightness_range=(0.8, 1.2), contrast_range=(0.8, 1.2))
-        image = add_gaussian_noise(image, std = 0.04)
-        image, keypoints = random_rotate(image, keypoints, degrees=(-15, 15), p=.6)
-        image, keypoints = random_crop(image, keypoints, crop_size=230, p=.6)
+    elif version == "5":
+        image = adjust_brightness_contrast(
+            image, brightness_range=(0.6, 1.4), contrast_range=(0.6, 1.4)
+        )
+        image = add_gaussian_noise(image, std=0.06)
+        image, keypoints = random_rotate(image, keypoints, p=0.6)
+    elif version == "6":
+        image = adjust_brightness_contrast(
+            image, brightness_range=(0.6, 1.4), contrast_range=(0.6, 1.4)
+        )
+        image = add_gaussian_noise(image, std=0.06)
+        image, keypoints = random_rotate(image, keypoints, p=0.5)
+        image, keypoints = random_crop(image, keypoints, crop_size=220, p=0.6)
+    elif version == "7":  # this one was used for AutoRV training
+        image = adjust_brightness_contrast(
+            image, brightness_range=(0.8, 1.2), contrast_range=(0.8, 1.2)
+        )
+        image = add_gaussian_noise(image, std=0.04)
+        image, keypoints = random_rotate(image, keypoints, degrees=(-15, 15), p=0.6)
+        image, keypoints = random_crop(image, keypoints, crop_size=230, p=0.6)
     else:
-        raise ValueError(f"Unsupported version: {version}") 
+        raise ValueError(f"Unsupported version: {version}")
 
     return image, keypoints

@@ -1,6 +1,7 @@
 import os
 import torch
 
+
 class ReduceLROnPlateau:
     """
     Reduces learning rate by a factor when a monitored metric stops improving for a certain number of epochs.
@@ -15,8 +16,18 @@ class ReduceLROnPlateau:
         min_lr (float): Minimum learning rate limit.
         delta (float): Minimum change in the monitored metric to be considered an improvement.
     """
-    
-    def __init__(self, optimizer, monitor='val_loss', mode='min', patience=5, factor=0.1, min_lr=1e-6, delta=0, initial_lr= 1e-4):
+
+    def __init__(
+        self,
+        optimizer,
+        monitor="val_loss",
+        mode="min",
+        patience=5,
+        factor=0.1,
+        min_lr=1e-6,
+        delta=0,
+        initial_lr=1e-4,
+    ):
         self.optimizer = optimizer
         self.monitor = monitor
         self.mode = mode
@@ -28,19 +39,19 @@ class ReduceLROnPlateau:
         self.counter = 0
         self.currentlr = initial_lr
 
-        if mode == 'min':
+        if mode == "min":
             self.compare = lambda new, best: new < best - delta  # Improvement if lower
-            self.best_score = float('inf')  # Initialize for minimization
-        elif mode == 'max':
+            self.best_score = float("inf")  # Initialize for minimization
+        elif mode == "max":
             self.compare = lambda new, best: new > best + delta  # Improvement if higher
-            self.best_score = float('-inf')  # Initialize for maximization
+            self.best_score = float("-inf")  # Initialize for maximization
         else:
             raise ValueError("mode must be 'min' or 'max'")
-    
+
     def __call__(self, metric_value):
         """
         Checks if the monitored metric improves; if not, increases the counter and reduces LR if patience is exceeded.
-        
+
         Args:
             metric_value (float): Current value of the monitored metric.
         """
@@ -52,11 +63,11 @@ class ReduceLROnPlateau:
             if self.counter >= self.patience:
                 self._reduce_lr()
                 self.counter = 0
-    
+
     def _reduce_lr(self):
         """Reduces the learning rate by the specified factor, ensuring it doesn't go below min_lr."""
         for param_group in self.optimizer.param_groups:
-            new_lr = max(param_group['lr'] * self.factor, self.min_lr)
-            param_group['lr'] = new_lr
+            new_lr = max(param_group["lr"] * self.factor, self.min_lr)
+            param_group["lr"] = new_lr
             self.currentlr = new_lr
         print(f"Learning rate reduced to {new_lr:.6f}")

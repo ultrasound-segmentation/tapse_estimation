@@ -1,5 +1,6 @@
 import os
 
+
 def get_experiment_path(base_path="runs/exp"):
     os.makedirs("runs", exist_ok=True)
     exp_num = 0

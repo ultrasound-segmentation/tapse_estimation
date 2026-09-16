@@ -2,6 +2,7 @@ import cupy as cp
 import numpy as np
 import cv2
 
+
 def create_video(array, output_path: str, fps: int = 1):
     """
     Creates a grayscale video from a NumPy or CuPy array where the third axis (index 2) is the time dimension.
@@ -22,7 +23,7 @@ def create_video(array, output_path: str, fps: int = 1):
     height, width, time_frames = array.shape
 
     # Define video writer (MP4 format, grayscale)
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height), isColor=False)
 
     for t in range(time_frames):
@@ -33,11 +34,10 @@ def create_video(array, output_path: str, fps: int = 1):
         frame = frame.astype(np.uint8)  # Convert to 8-bit grayscale
 
         # Convert grayscale to BGR (since OpenCV requires 3-channel input)
-        #frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+        # frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
         print(f"Writing frame {t+1}/{time_frames}")
         # Write frame to video
         out.write(frame)
 
     out.release()
     print(f"Video saved to {output_path}")
-

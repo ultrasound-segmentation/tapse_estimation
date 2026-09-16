@@ -6,7 +6,8 @@ import torch.nn.functional as F
 from torchvision import models
 from monai.networks.nets import UNet
 
-from temporal_pipeline.models import resnet3d 
+from temporal_pipeline.models import resnet3d
+
 
 class Identity(nn.Module):
     def __init__(self):
@@ -33,36 +34,40 @@ class Model(nn.Module):
 
 
 class UNet3D(nn.Module):
-    def __init__(self, 
-        device, 
+    def __init__(
+        self,
+        device,
         initial_channels=16,
         strides=(2, 2, 2, 2),
         num_res_units=2,
     ):
         super(UNet3D, self).__init__()
 
-        self.device=device
+        self.device = device
 
         print("---- Initializing 3D_UNet ----")
 
         network = UNet(
-                    spatial_dims=3,
-                    in_channels=1,
-                    out_channels=3,
-                    channels=(initial_channels, 
-                    2 * initial_channels, 
-                    4 * initial_channels, 
-                    8 * initial_channels, 
-                    16 * initial_channels),
-                    strides=strides,
-                    num_res_units=num_res_units,
-                ).to(self.device)
+            spatial_dims=3,
+            in_channels=1,
+            out_channels=3,
+            channels=(
+                initial_channels,
+                2 * initial_channels,
+                4 * initial_channels,
+                8 * initial_channels,
+                16 * initial_channels,
+            ),
+            strides=strides,
+            num_res_units=num_res_units,
+        ).to(self.device)
 
         self.network = network
 
     def forward(self, x):
         x = self.network(x)
         return x
+
 
 class EncoderDecoder_3d(nn.Module):
     def __init__(self):
@@ -76,12 +81,22 @@ class EncoderDecoder_3d(nn.Module):
         self.bn2 = nn.BatchNorm3d(128)
         self.bn1 = nn.BatchNorm3d(256)
 
-        self.upconv1 = nn.ConvTranspose3d(512, 256, kernel_size=(3, 3, 3), stride=2, padding=1, output_padding=1)
-        self.upconv2 = nn.ConvTranspose3d(256, 128, kernel_size=(3, 3, 3), stride=2, padding=1, output_padding=1)
-        self.upconv3 = nn.ConvTranspose3d(128, 64, kernel_size=(3, 3, 3), stride=2, padding=1, output_padding=1)
-        self.upconv4 = nn.ConvTranspose3d(64, 64, kernel_size=(3, 3, 3), stride=2, padding=1, output_padding=1)
+        self.upconv1 = nn.ConvTranspose3d(
+            512, 256, kernel_size=(3, 3, 3), stride=2, padding=1, output_padding=1
+        )
+        self.upconv2 = nn.ConvTranspose3d(
+            256, 128, kernel_size=(3, 3, 3), stride=2, padding=1, output_padding=1
+        )
+        self.upconv3 = nn.ConvTranspose3d(
+            128, 64, kernel_size=(3, 3, 3), stride=2, padding=1, output_padding=1
+        )
+        self.upconv4 = nn.ConvTranspose3d(
+            64, 64, kernel_size=(3, 3, 3), stride=2, padding=1, output_padding=1
+        )
 
-        self.outconv= nn.ConvTranspose3d(64, 3, 3, stride=(1, 2, 2), padding=(1, 1, 1), output_padding=(0, 1, 1))
+        self.outconv = nn.ConvTranspose3d(
+            64, 3, 3, stride=(1, 2, 2), padding=(1, 1, 1), output_padding=(0, 1, 1)
+        )
 
     def forward(self, x):
         x = self.resnet(x)
@@ -95,15 +110,14 @@ class EncoderDecoder_3d(nn.Module):
 
         return x
 
+
 if __name__ == "__main__":
 
     # Test 3D mode (sequence of images)
     print("\nTesting 3D mode (seq_len=32)...")
-    model_3d = UNet3D(device = 'cpu')
+    model_3d = UNet3D(device="cpu")
     x_3d = torch.randn(1, 1, 32, 224, 224)
     output_3d = model_3d(x_3d)
     print(f"Input shape: {x_3d.shape} -> Output shape: {output_3d.shape}")
 
     print("\nTest completed successfully!")
-
-

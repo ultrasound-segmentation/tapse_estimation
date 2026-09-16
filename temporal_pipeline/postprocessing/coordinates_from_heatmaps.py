@@ -3,7 +3,8 @@ import torch
 # script with the functions used to retrieve the coordinates of the landmarks from the
 # predicted feature maps (only when coordinates are not directly regressed)
 
-def center_of_mass_3d(tensor: torch.Tensor, thresh=0.9, device='cpu', normalize=False):
+
+def center_of_mass_3d(tensor: torch.Tensor, thresh=0.9, device="cpu", normalize=False):
     """
     Computes the 2D center of mass for each landmark and frame in a batch of tensors.
     The function takes the (1-thresh) most activated pixels in each 2d feature map, and
@@ -30,7 +31,7 @@ def center_of_mass_3d(tensor: torch.Tensor, thresh=0.9, device='cpu', normalize=
     # ------------------------------------------------------------------ #
     if tensor.ndim == 4:
         # Single sample supplied without a batch dimension → add one
-        tensor = tensor.unsqueeze(0)          # [1, B, C, H, W]
+        tensor = tensor.unsqueeze(0)  # [1, B, C, H, W]
 
     if tensor.ndim != 5:
         raise ValueError(
@@ -40,7 +41,7 @@ def center_of_mass_3d(tensor: torch.Tensor, thresh=0.9, device='cpu', normalize=
     # Move to the requested device and cast to float32 for all arithmetic
     tensor = tensor.float().to(device)
 
-    N, B, C, H, W = tensor.shape   # unpack all five axes for clarity
+    N, B, C, H, W = tensor.shape  # unpack all five axes for clarity
     # N = batch size          (e.g. 4)
     # B = number of landmarks (e.g. 3)
     # C = number of frames    (e.g. 32)
@@ -52,32 +53,29 @@ def center_of_mass_3d(tensor: torch.Tensor, thresh=0.9, device='cpu', normalize=
     # ------------------------------------------------------------------ #
     # Collapse H and W into a single axis to find the spatial minimum.
     # Result shape: [N, B, C, 1, 1]  (kept for broadcasting)
-    min_val = (tensor
-               .view(N, B, C, -1)          # [N, B, C, H*W]
-               .min(dim=-1)[0]             # [N, B, C]
-               .unsqueeze(-1)              # [N, B, C, 1]
-               .unsqueeze(-1))             # [N, B, C, 1, 1]
+    min_val = (
+        tensor.view(N, B, C, -1)  # [N, B, C, H*W]
+        .min(dim=-1)[0]  # [N, B, C]
+        .unsqueeze(-1)  # [N, B, C, 1]
+        .unsqueeze(-1)
+    )  # [N, B, C, 1, 1]
 
-    clipped = tensor - min_val             # shift min → 0; shape unchanged
+    clipped = tensor - min_val  # shift min → 0; shape unchanged
 
     # ------------------------------------------------------------------ #
     # 3.  Soft threshold: zero out everything below `thresh × max`.       #
     #     This focuses the centre-of-mass on the brightest region only.   #
     # ------------------------------------------------------------------ #
     # Per-channel maximum after the min-shift; shape: [N, B, C, 1, 1]
-    max_val = (clipped
-               .view(N, B, C, -1)
-               .max(dim=-1)[0]
-               .unsqueeze(-1)
-               .unsqueeze(-1))
+    max_val = clipped.view(N, B, C, -1).max(dim=-1)[0].unsqueeze(-1).unsqueeze(-1)
 
-    threshold = max_val * thresh           # scalar threshold per channel
+    threshold = max_val * thresh  # scalar threshold per channel
 
     # Subtract the threshold and clamp negatives to zero
     clipped = torch.where(
         clipped >= threshold,
-        clipped - threshold,               # keep (and shift) values above threshold
-        torch.zeros_like(clipped)          # zero out values below threshold
+        clipped - threshold,  # keep (and shift) values above threshold
+        torch.zeros_like(clipped),  # zero out values below threshold
     )
 
     # ------------------------------------------------------------------ #
@@ -88,20 +86,24 @@ def center_of_mass_3d(tensor: torch.Tensor, thresh=0.9, device='cpu', normalize=
 
     # "Dead" channels: channels where all pixels were zeroed out.
     # We'll fall back to the image centre for those.
-    dead_mask = total_mass < 1e-6          # bool tensor [N, B, C, 1, 1]
+    dead_mask = total_mass < 1e-6  # bool tensor [N, B, C, 1, 1]
 
     # ------------------------------------------------------------------ #
     # 5.  Coordinate grids  →  one value per pixel indicating its (x, y). #
     # ------------------------------------------------------------------ #
     # y_coords[..., row, :] == row index;  shape → [1, 1, 1, H, 1]
-    y_coords = (torch.arange(H, device=device, dtype=tensor.dtype)
-                .view(1, 1, 1, H, 1)
-                .expand(N, B, C, H, W))
+    y_coords = (
+        torch.arange(H, device=device, dtype=tensor.dtype)
+        .view(1, 1, 1, H, 1)
+        .expand(N, B, C, H, W)
+    )
 
     # x_coords[..., :, col] == col index;  shape → [1, 1, 1, 1, W]
-    x_coords = (torch.arange(W, device=device, dtype=tensor.dtype)
-                .view(1, 1, 1, 1, W)
-                .expand(N, B, C, H, W))
+    x_coords = (
+        torch.arange(W, device=device, dtype=tensor.dtype)
+        .view(1, 1, 1, 1, W)
+        .expand(N, B, C, H, W)
+    )
 
     # ------------------------------------------------------------------ #
     # 6.  Weighted average position  =  centre of mass.                   #
@@ -140,7 +142,7 @@ def center_of_mass_3d(tensor: torch.Tensor, thresh=0.9, device='cpu', normalize=
     # Permute to [N, C, B, 2]  (frames first, then landmarks, then xy)
     # This matches the original single-sample convention [1, 32, 3, 2]
     # but now generalised to a full batch.
-    coords = coords.permute(0, 2, 1, 3)   # [N, C, B, 2]
+    coords = coords.permute(0, 2, 1, 3)  # [N, C, B, 2]
 
     return coords
 
@@ -148,8 +150,8 @@ def center_of_mass_3d(tensor: torch.Tensor, thresh=0.9, device='cpu', normalize=
 def center_of_mass_3d_global_threshold(
     tensor: torch.Tensor,
     global_thresh: float = 0.1,
-    device: str = 'cpu',
-    normalize: bool = False
+    device: str = "cpu",
+    normalize: bool = False,
 ):
     """
     Computes the 2D center of mass for each landmark and frame in a batch of tensors.
@@ -185,7 +187,7 @@ def center_of_mass_3d_global_threshold(
     # ------------------------------------------------------------------ #
     if tensor.ndim == 4:
         # Single sample supplied without a batch dimension → add one
-        tensor = tensor.unsqueeze(0)          # [1, B, C, H, W]
+        tensor = tensor.unsqueeze(0)  # [1, B, C, H, W]
 
     if tensor.ndim != 5:
         raise ValueError(
@@ -195,7 +197,7 @@ def center_of_mass_3d_global_threshold(
     # Move to the requested device and cast to float32 for all arithmetic
     tensor = tensor.float().to(device)
 
-    N, B, C, H, W = tensor.shape   # unpack all five axes for clarity
+    N, B, C, H, W = tensor.shape  # unpack all five axes for clarity
     # N = batch size          (e.g. 4)
     # B = number of landmarks (e.g. 3)
     # C = number of frames    (e.g. 32)
@@ -211,11 +213,7 @@ def center_of_mass_3d_global_threshold(
 
     # Apply global threshold: keep values >= global_thresh × global_max
     threshold = global_max * global_thresh
-    clipped = torch.where(
-        tensor >= threshold,
-        tensor,
-        torch.zeros_like(tensor)
-    )
+    clipped = torch.where(tensor >= threshold, tensor, torch.zeros_like(tensor))
 
     # ------------------------------------------------------------------ #
     # 3.  Total mass per channel  →  used as the normalising denominator. #
@@ -225,20 +223,24 @@ def center_of_mass_3d_global_threshold(
 
     # "Dead" channels: channels where all pixels were zeroed out.
     # We'll return NaN for those (no valid prediction).
-    dead_mask = total_mass < 1e-6          # bool tensor [N, B, C, 1, 1]
+    dead_mask = total_mass < 1e-6  # bool tensor [N, B, C, 1, 1]
 
     # ------------------------------------------------------------------ #
     # 4.  Coordinate grids  →  one value per pixel indicating its (x, y). #
     # ------------------------------------------------------------------ #
     # y_coords[..., row, :] == row index;  shape → [1, 1, 1, H, 1]
-    y_coords = (torch.arange(H, device=device, dtype=tensor.dtype)
-                .view(1, 1, 1, H, 1)
-                .expand(N, B, C, H, W))
+    y_coords = (
+        torch.arange(H, device=device, dtype=tensor.dtype)
+        .view(1, 1, 1, H, 1)
+        .expand(N, B, C, H, W)
+    )
 
     # x_coords[..., :, col] == col index;  shape → [1, 1, 1, 1, W]
-    x_coords = (torch.arange(W, device=device, dtype=tensor.dtype)
-                .view(1, 1, 1, 1, W)
-                .expand(N, B, C, H, W))
+    x_coords = (
+        torch.arange(W, device=device, dtype=tensor.dtype)
+        .view(1, 1, 1, 1, W)
+        .expand(N, B, C, H, W)
+    )
 
     # ------------------------------------------------------------------ #
     # 5.  Weighted average position  =  centre of mass.                   #
@@ -256,8 +258,8 @@ def center_of_mass_3d_global_threshold(
     #     Unlike center_of_mass_3d which uses image centre, here we signal #
     #     that there is NO prediction for this channel.                    #
     # ------------------------------------------------------------------ #
-    x_center = torch.where(dead_mask, torch.full_like(x_center, float('nan')), x_center)
-    y_center = torch.where(dead_mask, torch.full_like(y_center, float('nan')), y_center)
+    x_center = torch.where(dead_mask, torch.full_like(x_center, float("nan")), x_center)
+    y_center = torch.where(dead_mask, torch.full_like(y_center, float("nan")), y_center)
 
     # Remove the two trailing size-1 axes → [N, B, C]
     x_center = x_center.squeeze(-1).squeeze(-1)
@@ -279,13 +281,18 @@ def center_of_mass_3d_global_threshold(
     # Permute to [N, C, B, 2]  (frames first, then landmarks, then xy)
     # This matches the original single-sample convention [1, 32, 3, 2]
     # but now generalised to a full batch.
-    coords = coords.permute(0, 2, 1, 3)   # [N, C, B, 2]
+    coords = coords.permute(0, 2, 1, 3)  # [N, C, B, 2]
 
     return coords
 
 
-def argmax_3d(tensor: torch.Tensor, device='cpu', normalize=False,
-              thresh_method=False, threshold=None):
+def argmax_3d(
+    tensor: torch.Tensor,
+    device="cpu",
+    normalize=False,
+    thresh_method=False,
+    threshold=None,
+):
     """
     Computes the argmax coordinates for each landmark and frame in a batch of heatmaps.
     Takes the channel-wise maximum position.

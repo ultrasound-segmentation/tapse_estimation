@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch
 
+
 def initialize_weights(model):
     for m in model.modules():
         if isinstance(m, nn.Linear):
@@ -8,6 +9,8 @@ def initialize_weights(model):
             if m.bias is not None:
                 nn.init.zeros_(m.bias)
         elif isinstance(m, nn.Conv2d):
-            nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')  # Kaiming Initialization
+            nn.init.kaiming_normal_(
+                m.weight, mode="fan_out", nonlinearity="relu"
+            )  # Kaiming Initialization
             if m.bias is not None:
                 nn.init.zeros_(m.bias)

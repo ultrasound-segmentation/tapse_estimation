@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 
-''' losses used in the distance+movement based training method'''
+""" losses used in the distance+movement based training method"""
+
 
 class CombinedLandmarkLoss(nn.Module):
     """
@@ -31,11 +32,11 @@ class CombinedLandmarkLoss(nn.Module):
         pass larger B values when batching.
     """
 
-    def __init__(self, lambda_motion=1, lambda_var=0.1, reduction='mean'):
+    def __init__(self, lambda_motion=1, lambda_var=0.1, reduction="mean"):
         super().__init__()
         self.lambda_motion = lambda_motion
-        self.lambda_var    = lambda_var
-        self.reduction     = reduction
+        self.lambda_var = lambda_var
+        self.reduction = reduction
 
     # ------------------------------------------------------------------
     # helpers
@@ -43,9 +44,9 @@ class CombinedLandmarkLoss(nn.Module):
 
     def _reduce(self, x: torch.Tensor) -> torch.Tensor:
         """Apply the chosen reduction to a tensor of arbitrary shape."""
-        if self.reduction == 'mean':
+        if self.reduction == "mean":
             return x.mean()
-        elif self.reduction == 'sum':
+        elif self.reduction == "sum":
             return x.sum()
         return x  # 'none' — return unreduced tensor
 
@@ -55,7 +56,7 @@ class CombinedLandmarkLoss(nn.Module):
 
     def _dist_loss(
         self,
-        pred:   torch.Tensor,
+        pred: torch.Tensor,
         target: torch.Tensor,
     ) -> torch.Tensor:
         """
@@ -79,7 +80,7 @@ class CombinedLandmarkLoss(nn.Module):
 
     def _motion_loss(
         self,
-        pred:   torch.Tensor,
+        pred: torch.Tensor,
         target: torch.Tensor,
     ) -> torch.Tensor:
         """
@@ -102,18 +103,16 @@ class CombinedLandmarkLoss(nn.Module):
             Scalar loss.
         """
         # Frame-to-frame displacement vectors — shape: [B, N-1, 3, 2]
-        pred_delta   = pred[:, 1:, :, :] - pred[:, :-1, :, :]
+        pred_delta = pred[:, 1:, :, :] - pred[:, :-1, :, :]
         target_delta = target[:, 1:, :, :] - target[:, :-1, :, :]
 
         # L2 error between predicted and target displacement — [B, N-1, 3]
-        motion_error = torch.linalg.norm(
-            pred_delta - target_delta, ord=2, dim=-1
-        )
+        motion_error = torch.linalg.norm(pred_delta - target_delta, ord=2, dim=-1)
         return self._reduce(motion_error)
 
     def _var_loss(
         self,
-        pred:   torch.Tensor,
+        pred: torch.Tensor,
         target: torch.Tensor,
     ) -> torch.Tensor:
         """
@@ -139,7 +138,7 @@ class CombinedLandmarkLoss(nn.Module):
             Scalar loss.
         """
         # Temporal variance per (batch, landmark, coord) — shape: [B, 3, 2]
-        pred_var   = pred.var(dim=1)
+        pred_var = pred.var(dim=1)
         target_var = target.var(dim=1)
 
         # Only penalise when predicted variance falls *below* target variance
@@ -152,7 +151,7 @@ class CombinedLandmarkLoss(nn.Module):
 
     def forward(
         self,
-        pred:   torch.Tensor,
+        pred: torch.Tensor,
         target: torch.Tensor,
     ) -> tuple[torch.Tensor, dict]:
         """
@@ -170,19 +169,17 @@ class CombinedLandmarkLoss(nn.Module):
         # ── rank normalisation ──────────────────────────────────────────
         # Accept a single un-batched sample and promote it to [1, N, 3, 2]
         if pred.dim() == 3:
-            pred   = pred.unsqueeze(0)
+            pred = pred.unsqueeze(0)
             target = target.unsqueeze(0)
 
         # ── validate ────────────────────────────────────────────────────
         if pred.dim() != 4 or pred.shape[-2:] != torch.Size([3, 2]):
             raise ValueError(
-                f"Expected pred shape [B, N, 3, 2] (or [N, 3, 2]), "
-                f"got {pred.shape}"
+                f"Expected pred shape [B, N, 3, 2] (or [N, 3, 2]), " f"got {pred.shape}"
             )
         if pred.shape != target.shape:
             raise ValueError(
-                f"pred and target shapes must match: "
-                f"{pred.shape} vs {target.shape}"
+                f"pred and target shapes must match: " f"{pred.shape} vs {target.shape}"
             )
 
         # B = batch size (number of video clips in this mini-batch)
@@ -195,9 +192,9 @@ class CombinedLandmarkLoss(nn.Module):
         # Merge the batch and frame axes so that every (clip, frame) pair
         # is scored independently as a set of 3 landmarks.
         # Shape: [B, N, 3, 2] → [B*N, 3, 2]
-        pred_flat   = pred.reshape(B * N, P, C)
+        pred_flat = pred.reshape(B * N, P, C)
         target_flat = target.reshape(B * N, P, C)
-        loss_dist   = self._dist_loss(pred_flat, target_flat)
+        loss_dist = self._dist_loss(pred_flat, target_flat)
 
         # ── component 2: motion consistency ─────────────────────────────
         # Needs the temporal axis intact to compute Δ between frames.
@@ -211,19 +208,18 @@ class CombinedLandmarkLoss(nn.Module):
 
         # ── combine ──────────────────────────────────────────────────────
         total_loss = (
-            loss_dist
-            + self.lambda_motion * loss_motion
-            + self.lambda_var    * loss_var
+            loss_dist + self.lambda_motion * loss_motion + self.lambda_var * loss_var
         )
 
         # Breakdown dict — weighted values for TensorBoard / W&B logging
         breakdown = {
-            'dist':   loss_dist.item(),
-            'motion': loss_motion.item() * self.lambda_motion,
-            'var':    loss_var.item()    * self.lambda_var,
+            "dist": loss_dist.item(),
+            "motion": loss_motion.item() * self.lambda_motion,
+            "var": loss_var.item() * self.lambda_var,
         }
 
         return total_loss, breakdown
+
 
 class CombinedLossPenalty(nn.Module):
     """
@@ -251,12 +247,14 @@ class CombinedLossPenalty(nn.Module):
         target : [B, N, 3, 2]  — ground-truth, always valid
     """
 
-    def __init__(self, lambda_motion=1, lambda_var=0.1, missing_penalty=1.0, reduction='mean'):
+    def __init__(
+        self, lambda_motion=1, lambda_var=0.1, missing_penalty=1.0, reduction="mean"
+    ):
         super().__init__()
         self.lambda_motion = lambda_motion
-        self.lambda_var    = lambda_var
+        self.lambda_var = lambda_var
         self.missing_penalty = missing_penalty
-        self.reduction     = reduction
+        self.reduction = reduction
 
     # ------------------------------------------------------------------
     # helpers
@@ -264,9 +262,9 @@ class CombinedLossPenalty(nn.Module):
 
     def _reduce(self, x: torch.Tensor) -> torch.Tensor:
         """Apply the chosen reduction to a tensor of arbitrary shape."""
-        if self.reduction == 'mean':
+        if self.reduction == "mean":
             return x.mean()
-        elif self.reduction == 'sum':
+        elif self.reduction == "sum":
             return x.sum()
         return x  # 'none' — return unreduced tensor
 
@@ -276,7 +274,7 @@ class CombinedLossPenalty(nn.Module):
 
     def _dist_loss(
         self,
-        pred:   torch.Tensor,
+        pred: torch.Tensor,
         target: torch.Tensor,
         valid_mask: torch.Tensor,
     ) -> torch.Tensor:
@@ -298,7 +296,7 @@ class CombinedLossPenalty(nn.Module):
         # For mean reduction, we need to divide by valid count, not total count
         masked_distances = distances * valid_mask.float()
 
-        if self.reduction == 'mean':
+        if self.reduction == "mean":
             # Count valid entries for proper averaging
             valid_count = valid_mask.sum()
             if valid_count > 0:
@@ -310,7 +308,7 @@ class CombinedLossPenalty(nn.Module):
 
     def _motion_loss(
         self,
-        pred:   torch.Tensor,
+        pred: torch.Tensor,
         target: torch.Tensor,
     ) -> torch.Tensor:
         """
@@ -324,7 +322,7 @@ class CombinedLossPenalty(nn.Module):
             Scalar loss.
         """
         # Frame-to-frame displacement vectors — shape: [B, N-1, 3, 2]
-        pred_delta   = pred[:, 1:, :, :] - pred[:, :-1, :, :]
+        pred_delta = pred[:, 1:, :, :] - pred[:, :-1, :, :]
         target_delta = target[:, 1:, :, :] - target[:, :-1, :, :]
 
         # Create validity mask for motion: valid only if BOTH t and t-1 are valid
@@ -341,7 +339,7 @@ class CombinedLossPenalty(nn.Module):
         # Apply mask
         masked_motion = motion_error * valid_motion.float()
 
-        if self.reduction == 'mean':
+        if self.reduction == "mean":
             valid_count = valid_motion.sum()
             if valid_count > 0:
                 return masked_motion.sum() / valid_count
@@ -352,7 +350,7 @@ class CombinedLossPenalty(nn.Module):
 
     def _var_loss(
         self,
-        pred:   torch.Tensor,
+        pred: torch.Tensor,
         target: torch.Tensor,
     ) -> torch.Tensor:
         """
@@ -373,7 +371,7 @@ class CombinedLossPenalty(nn.Module):
         pred_filled[~valid_pred] = 0.0
 
         # Temporal variance per (batch, landmark, coord) — shape: [B, 3, 2]
-        pred_var   = pred_filled.var(dim=1)
+        pred_var = pred_filled.var(dim=1)
         target_var = target.var(dim=1)
 
         # Only penalise when predicted variance falls *below* target variance
@@ -389,7 +387,7 @@ class CombinedLossPenalty(nn.Module):
         # Apply mask: set invalid landmarks to 0
         var_deficit = var_deficit * valid_landmarks.float()
 
-        if self.reduction == 'mean':
+        if self.reduction == "mean":
             # Count total valid (landmark, coord) pairs across all batches
             valid_count = valid_landmarks.sum()  # scalar
             if valid_count > 0:
@@ -405,7 +403,7 @@ class CombinedLossPenalty(nn.Module):
 
     def forward(
         self,
-        pred:   torch.Tensor,
+        pred: torch.Tensor,
         target: torch.Tensor,
     ) -> tuple[torch.Tensor, dict]:
         """
@@ -421,19 +419,17 @@ class CombinedLossPenalty(nn.Module):
         """
         # ── rank normalisation ──────────────────────────────────────────
         if pred.dim() == 3:
-            pred   = pred.unsqueeze(0)
+            pred = pred.unsqueeze(0)
             target = target.unsqueeze(0)
 
         # ── validate ────────────────────────────────────────────────────
         if pred.dim() != 4 or pred.shape[-2:] != torch.Size([3, 2]):
             raise ValueError(
-                f"Expected pred shape [B, N, 3, 2] (or [N, 3, 2]), "
-                f"got {pred.shape}"
+                f"Expected pred shape [B, N, 3, 2] (or [N, 3, 2]), " f"got {pred.shape}"
             )
         if pred.shape != target.shape:
             raise ValueError(
-                f"pred and target shapes must match: "
-                f"{pred.shape} vs {target.shape}"
+                f"pred and target shapes must match: " f"{pred.shape} vs {target.shape}"
             )
 
         B, N, P, C = pred.shape
@@ -443,7 +439,7 @@ class CombinedLossPenalty(nn.Module):
         valid_mask = ~torch.isnan(pred[:, :, :, 0])  # [B, N, 3]
 
         # ── component 1: frame-level distance (valid only) ─────────────
-        pred_flat   = pred.reshape(B * N, P, C)
+        pred_flat = pred.reshape(B * N, P, C)
         target_flat = target.reshape(B * N, P, C)
         valid_mask_flat = valid_mask.reshape(B * N, P)  # [B*N, 3]
 
@@ -459,25 +455,26 @@ class CombinedLossPenalty(nn.Module):
         # Count total missing predictions and add fixed penalty for each (divided by the total
         # predictions)
         num_missing = (~valid_mask).sum()  # scalar
-        loss_missing = num_missing * self.missing_penalty / N 
+        loss_missing = num_missing * self.missing_penalty / N
 
         # ── combine ──────────────────────────────────────────────────────
         total_loss = (
             loss_dist
             + self.lambda_motion * loss_motion
-            + self.lambda_var    * loss_var
+            + self.lambda_var * loss_var
             + loss_missing
         )
 
         # Breakdown dict — weighted values for logging
         breakdown = {
-            'dist':    loss_dist.item(),
-            'motion':  loss_motion.item() * self.lambda_motion,
-            'var':     loss_var.item()     * self.lambda_var,
-            'missing': loss_missing.item(),
+            "dist": loss_dist.item(),
+            "motion": loss_motion.item() * self.lambda_motion,
+            "var": loss_var.item() * self.lambda_var,
+            "missing": loss_missing.item(),
         }
 
         return total_loss, breakdown
+
 
 # Example usage
 if __name__ == "__main__":
@@ -487,6 +484,6 @@ if __name__ == "__main__":
     pred = torch.rand(batch_size, num_classes, 2)  # Random predicted points
     target = torch.rand(batch_size, num_classes, 2)  # Random ground-truth points
 
-    loss_fn = UnorderedMSELoss(reduction='mean')  # Create loss criterion
+    loss_fn = UnorderedMSELoss(reduction="mean")  # Create loss criterion
     loss = loss_fn(pred, target)  # Compute loss
     print("Loss:", loss.item())

@@ -1,6 +1,7 @@
 import torch
 import os
 
+
 class EarlyStopping:
     """
     Implements early stopping to halt training when a monitored metric stops improving.
@@ -14,7 +15,9 @@ class EarlyStopping:
         path (str): Path to save the best model checkpoint.
     """
 
-    def __init__(self, monitor='val_loss', mode='min', patience=5, delta=0, path='/checkpoints'):
+    def __init__(
+        self, monitor="val_loss", mode="min", patience=5, delta=0, path="/checkpoints"
+    ):
         self.monitor = monitor
         self.mode = mode
         self.patience = patience
@@ -25,12 +28,12 @@ class EarlyStopping:
         self.early_stop = False
 
         # Define comparison function based on mode
-        if mode == 'min':
+        if mode == "min":
             self.compare = lambda new, best: new < best - delta  # Improvement if lower
-            self.best_score = float('inf')  # Initialize for minimization
-        elif mode == 'max':
+            self.best_score = float("inf")  # Initialize for minimization
+        elif mode == "max":
             self.compare = lambda new, best: new > best + delta  # Improvement if higher
-            self.best_score = float('-inf')  # Initialize for maximization
+            self.best_score = float("-inf")  # Initialize for maximization
         else:
             raise ValueError("mode must be 'min' or 'max'")
 
@@ -49,7 +52,10 @@ class EarlyStopping:
         if self.compare(metric_value, self.best_score):
             self.best_score = metric_value
             self.counter = 0
-            torch.save({'model_state_dict': model.state_dict()}, os.path.join(self.path, 'best_model.pth'))  # Save best model
+            torch.save(
+                {"model_state_dict": model.state_dict()},
+                os.path.join(self.path, "best_model.pth"),
+            )  # Save best model
         else:
             self.counter += 1
             if self.counter >= self.patience:

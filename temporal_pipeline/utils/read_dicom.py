@@ -1,6 +1,7 @@
 import pydicom
 import os
 
+
 def read_dicom_name(file_path):
     """
     Reads and prints all fields from a DICOM file.
@@ -8,7 +9,7 @@ def read_dicom_name(file_path):
     """
 
     dicom_data = pydicom.dcmread(file_path)
-    
+
     # List of tags related to image data
     image_related_tags = [
         (0x7FE0, 0x0010),  # Pixel Data
@@ -18,9 +19,9 @@ def read_dicom_name(file_path):
         (0x0028, 0x0100),  # Bits Allocated
         (0x0028, 0x0101),  # Bits Stored
         (0x0028, 0x0102),  # High Bit
-        (0x0028, 0x0103)   # Pixel Representation
+        (0x0028, 0x0103),  # Pixel Representation
     ]
-    
+
     # Print non-image fields
     for elem in dicom_data:
         if elem.tag not in image_related_tags:
@@ -34,27 +35,28 @@ def read_dicom_name(file_path):
     # if hasattr(dicom_data, 'StudyID'):
     #     print(f"Study id: {dicom_data.StudyID}")
 
-    if hasattr(dicom_data, 'SOPClassUID'):
-        return (dicom_data.StudyInstanceUID,dicom_data.SeriesInstanceUID)
+    if hasattr(dicom_data, "SOPClassUID"):
+        return (dicom_data.StudyInstanceUID, dicom_data.SeriesInstanceUID)
     else:
         return None
 
 
 if __name__ == "__main__":
-    read_dicom_name(r'data/2d_focused_rv/RV focused TEE images_complete/__103151/P3KAFSO2')
+    read_dicom_name(
+        r"data/2d_focused_rv/RV focused TEE images_complete/__103151/P3KAFSO2"
+    )
     # folder = r"data/2d_focused_rv/RV focused TEE images_complete"
     # patients = []
-    
+
     # # Prima iterazione per raccogliere tutti i pazienti unici
     # for subf in os.listdir(folder):
     #     subf_path = os.path.join(folder, subf)
     #     for file in os.listdir(subf_path):
     #         file_path = os.path.join(subf_path, file)
     #         patient = read_dicom_name(file_path)
-        
+
     #         if patient:
     #             patients.append(patient)
-        
 
     # # Creazione di un dizionario con liste vuote per ogni paziente unico
     # unique_patients_dict = {patient: [] for patient in set(patients)}
@@ -73,5 +75,3 @@ if __name__ == "__main__":
     #     print(f"Patient: {patient}")
     #     for f in files:
     #         print(f"  - {f}")
-
-

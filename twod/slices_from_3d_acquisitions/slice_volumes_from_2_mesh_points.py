@@ -6,14 +6,15 @@ import json
 from utils.extract_slices import extract_slices
 
 # code that was used to extract the 2d slices from 3D acquisitions.
-# I started from the 3d mash (segmentation), made by an expert clinician on top of 
-# the acquisition, then I used 3Dslicer to manually select the center of the tricuspid 
-#valve and the apex of the ventricle. Using this line, the ventricle is oriented. Then you cna
+# I started from the 3d mash (segmentation), made by an expert clinician on top of
+# the acquisition, then I used 3Dslicer to manually select the center of the tricuspid
+# valve and the apex of the ventricle. Using this line, the ventricle is oriented. Then you cna
 # slice it with planes passing through this line, and obtain 2d views of the ventricle.
 
 folder = r"D:\mmissana\data\4DRVQ_Jinyang\voxels"
 save_folder = r"D:\mmissana\data\processed_imgs_2"
 checkpoint_file = r"D:\mmissana\data\checkpoint.json"
+
 
 def load_checkpoint():
     """Load checkpoint file if exists."""
@@ -22,15 +23,18 @@ def load_checkpoint():
             return json.load(f)
     return {}
 
+
 def save_checkpoint(checkpoint_data):
     """Save checkpoint data."""
     with open(checkpoint_file, "w") as f:
         json.dump(checkpoint_data, f, indent=4)
 
+
 def print_structure(name, obj):
     print(name, obj)
 
-degrees = np.linspace(np.pi, 2*np.pi, 20)
+
+degrees = np.linspace(np.pi, 2 * np.pi, 20)
 checkpoint = load_checkpoint()  # Load progress
 
 for file in os.listdir(folder):
@@ -41,9 +45,9 @@ for file in os.listdir(folder):
         print(f"Skipping {file}, already processed.")
         continue
 
-    with h5py.File(file_path, 'r') as h5_file:
+    with h5py.File(file_path, "r") as h5_file:
         h5_file.visititems(print_structure)
-        grids = list(h5_file['Input'].keys())
+        grids = list(h5_file["Input"].keys())
 
         for grid in grids:
             # Skip processed grids
@@ -52,8 +56,8 @@ for file in os.listdir(folder):
                 continue
 
             while True:  # Repeat until user decides to save
-                input_data = h5_file['Input'][grid][:]
-                ground_truth = h5_file['GroundTruth'][grid][:]
+                input_data = h5_file["Input"][grid][:]
+                ground_truth = h5_file["GroundTruth"][grid][:]
                 imgs = extract_slices(input_data, ground_truth, degrees)
 
                 viewer = VolumeViewer(imgs)
@@ -61,9 +65,11 @@ for file in os.listdir(folder):
 
                 user_choice = ""
                 while user_choice not in ["y", "n"]:
-                    user_choice = input(f"Save images for {grid}? (y/n): ").strip().lower()
+                    user_choice = (
+                        input(f"Save images for {grid}? (y/n): ").strip().lower()
+                    )
 
-                if user_choice == 'y':
+                if user_choice == "y":
                     save_path = os.path.join(save_folder, file, f"{grid}.npz")
                     os.makedirs(os.path.dirname(save_path), exist_ok=True)
                     np.savez_compressed(save_path, imgs)

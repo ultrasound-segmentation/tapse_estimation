@@ -7,7 +7,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import argparse
 
-from dataloader.preprocessing import preprocess_images, apply_lut, resize_or_crop_image_np_nokeypoints
+from dataloader.preprocessing import (
+    preprocess_images,
+    apply_lut,
+    resize_or_crop_image_np_nokeypoints,
+)
 from utils.plot import save_image_ill
 from postprocessing.coordinates_calculation_from_masks import center_of_mass
 from postprocessing.kalman_filter import KalmanFilter
@@ -27,10 +31,10 @@ def process_h5_file_single_illustrative(
     Processes a .h5 file frame by frame (no batching) and optionally applies a Kalman filter.
     """
 
-    with h5py.File(file_path, 'r') as f:
-        images = f['tissue']['data'][()]  # (H, W, N)
-        if 'tissue' in f and 'times' in f['tissue']:
-            times = f['tissue']['times'][()]
+    with h5py.File(file_path, "r") as f:
+        images = f["tissue"]["data"][()]  # (H, W, N)
+        if "tissue" in f and "times" in f["tissue"]:
+            times = f["tissue"]["times"][()]
             dt = times[1] - times[0]
         else:
             dt = 1  # fallback if timing info not available
@@ -49,11 +53,15 @@ def process_h5_file_single_illustrative(
     # --- Predict coordinates frame by frame ---
     for i in range(N):
         img = images[i]
-        img = preprocess_images(np.expand_dims(img, axis=0), model_type='U-Net', device=device)
+        img = preprocess_images(
+            np.expand_dims(img, axis=0), model_type="U-Net", device=device
+        )
         output = model(img.float().unsqueeze(0).to(device))
 
         for c in range(3):
-            coordinates_array[i, c] = center_of_mass(output[0, c].detach(), thresh=threshold)
+            coordinates_array[i, c] = center_of_mass(
+                output[0, c].detach(), thresh=threshold
+            )
 
     # --- Apply Kalman filter if requested ---
     if apply_filter:
@@ -65,9 +73,9 @@ def process_h5_file_single_illustrative(
             for _ in range(3)
         ]
         for j in range(3):
-            kfs[j].x = np.matrix([coordinates_array[0, j, 0],
-                                  coordinates_array[0, j, 1],
-                                  0, 0]).T
+            kfs[j].x = np.matrix(
+                [coordinates_array[0, j, 0], coordinates_array[0, j, 1], 0, 0]
+            ).T
 
         for i, coords in enumerate(coordinates_array):
             for j in range(3):
@@ -83,41 +91,72 @@ def process_h5_file_single_illustrative(
         ann_points = None
         bold_flag = False
 
-        save_image_ill(
-            img,
-            points=pred_points,
-            save_folder=save_path,
-            bold=bold_flag
-        )
+        save_image_ill(img, points=pred_points, save_folder=save_path, bold=bold_flag)
 
     return coordinates_array, None, None
 
 
 def main():
     parser = argparse.ArgumentParser(description="Landmark prediction from .h5 files")
-    parser.add_argument("--threshold", required=True, type=float, default=0.875, help="Threshold for center_of_mass")
-    parser.add_argument("--save_images", action='store_true', help="Flag to save images with predicted keypoints")
-    parser.add_argument('--no_sudden_movements', action='store_true', help='Flag to avoid sudden movements in keypoints')
-    parser.add_argument('--threshold_sudden', type=int, default=20, help='Threshold for sudden movement detection')
-    parser.add_argument('--filter', action='store_true', help='Apply Kalman filter to smooth coordinates')
+    parser.add_argument(
+        "--threshold",
+        required=True,
+        type=float,
+        default=0.875,
+        help="Threshold for center_of_mass",
+    )
+    parser.add_argument(
+        "--save_images",
+        action="store_true",
+        help="Flag to save images with predicted keypoints",
+    )
+    parser.add_argument(
+        "--no_sudden_movements",
+        action="store_true",
+        help="Flag to avoid sudden movements in keypoints",
+    )
+    parser.add_argument(
+        "--threshold_sudden",
+        type=int,
+        default=20,
+        help="Threshold for sudden movement detection",
+    )
+    parser.add_argument(
+        "--filter",
+        action="store_true",
+        help="Apply Kalman filter to smooth coordinates",
+    )
     args = parser.parse_args()
 
-    model_checkpoint = r'C:\Users\User\OneDrive - Politecnico di Milano\matteo onedrive\OneDrive - Politecnico di Milano\mmissana\relevant_data\model_weights\best_unet\best_model.pth'
-    test_path = r'C:\Users\User\Desktop\final_reviewed_dataset'
-    save_path = r'C:\Users\User\Desktop\illustrative_video'
+    model_checkpoint = r"C:\Users\User\OneDrive - Politecnico di Milano\matteo onedrive\OneDrive - Politecnico di Milano\mmissana\relevant_data\model_weights\best_unet\best_model.pth"
+    test_path = r"C:\Users\User\Desktop\final_reviewed_dataset"
+    save_path = r"C:\Users\User\Desktop\illustrative_video"
 
     os.makedirs(save_path, exist_ok=True)
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model = Unet(depth=6, start_filts=16, num_residuals=0).to(device)
-    model.load_state_dict(torch.load(model_checkpoint, map_location=device)['model_state_dict'])
+    model.load_state_dict(
+        torch.load(model_checkpoint, map_location=device)["model_state_dict"]
+    )
     model.eval()
 
     for folder in os.listdir(test_path):
         folder_path = os.path.join(test_path, folder)
-        if folder in ['100', '111', '140', '149', '160', '170', '190', '198', '199', '920']:
+        if folder in [
+            "100",
+            "111",
+            "140",
+            "149",
+            "160",
+            "170",
+            "190",
+            "198",
+            "199",
+            "920",
+        ]:
             for file in os.listdir(folder_path):
-                if 'interpolated' in file:
+                if "interpolated" in file:
                     file_path = os.path.join(folder_path, file)
 
                     process_h5_file_single_illustrative(
