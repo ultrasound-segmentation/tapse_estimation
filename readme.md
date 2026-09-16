@@ -36,7 +36,7 @@ The model is trained to reproduce heatmaps containing a "gaussian" centered on t
 git clone https://github.com/MatteoMissana/tapse_estimation
 cd tapse_estimation
 . setup.sh
-```
+``
 
 Then refer to [`./twod/README.md`](./twod/README.md) for pipeline-specific instructions.
 
@@ -44,6 +44,15 @@ Then refer to [`./twod/README.md`](./twod/README.md) for pipeline-specific instr
 To start, you should add a `.env` file. Here you should add
 ```
 DATASET_PATH=<path to directory with all subdirectories with .h5 files>
+
+## Formatting
+
+After running the [`./requirements.txt-file`](./requirements.txt):
+
+Locate the project-directory and format the project with:
+
+```bash
+black .
 ```
 
 ## Demo (click on it for the video)

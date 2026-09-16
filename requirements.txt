@@ -10,3 +10,4 @@ wandb
 matplotlib
 torchinfo
 python-dotenv
+black
