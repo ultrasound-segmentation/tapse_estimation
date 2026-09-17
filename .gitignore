@@ -1,6 +1,7 @@
 .idea/
 .venv/
 runs/
+data/*
 checkpoints/
 2d+t/checkpoints/
 /checkpoints/
@@ -27,4 +28,3 @@ logs/*
 **/__pycache__/
 
 /tapse_estimation.egg-info/
-/data/
