@@ -35,4 +35,6 @@ python twod/pipeline_testing/auto_idx_calculation/indices_prediction.py \
   --two_dimensional \
   --reduction max \
   --area_method spline \
-  --best_combination
+  --best_combination \
+  --count_beats \
+  --avg_all

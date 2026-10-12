@@ -27,6 +27,6 @@ module load Python/3.12.3-GCCcore-13.3.0
 source .venv/bin/activate
 python twod/training.py \
     --model monai_U-Net \
-    --epochs 100 \
+    --epochs 25 \
     --from_scratch \
     --save_model_path twod/runs/resnet_run

@@ -84,7 +84,7 @@ def predict_indices(
         im = preprocess_images(
             np.expand_dims(im, axis=0), model_type="U-Net", device=device
         )
-        output = model(im.float().unsqueeze(0).to(device))
+        output = model(im.float().to(device))
 
         coords = [
             center_of_mass(output[0, c].detach(), thresh=threshold) for c in range(3)

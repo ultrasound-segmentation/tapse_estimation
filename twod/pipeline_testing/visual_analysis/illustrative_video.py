@@ -56,7 +56,7 @@ def process_h5_file_single_illustrative(
         img = preprocess_images(
             np.expand_dims(img, axis=0), model_type="U-Net", device=device
         )
-        output = model(img.float().unsqueeze(0).to(device))
+        output = model(img.float().to(device))
 
         for c in range(3):
             coordinates_array[i, c] = center_of_mass(

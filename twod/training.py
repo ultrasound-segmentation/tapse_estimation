@@ -537,7 +537,6 @@ def main():
         for im in images:
             im = np.expand_dims(im, axis=0)
             im = preprocess_images(im, model_type=args.model, device=device)
-            im = im.unsqueeze(0)
             output = model(im)
             coordinates_1 = center_of_mass(output[0, 0].detach(), thresh=args.thresh)
             coordinates_2 = center_of_mass(output[0, 1].detach(), thresh=args.thresh)
