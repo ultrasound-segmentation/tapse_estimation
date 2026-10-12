@@ -4,7 +4,7 @@
 
 #SBATCH --partition=GPUQ          # Asking for a GPU
 #SBATCH --gres=gpu:1             # Setting the number of GPUs to 1
-#SBATCH --mem=16G                 # Asking for 16GB RAM
+#SBATCH --mem=28G                 # Asking for 28GB RAM
 #SBATCH --nodes=1
 #SBATCH --output=logs/inference.txt      # Specifying 'stdout'
 
