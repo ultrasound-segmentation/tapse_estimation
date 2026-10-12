@@ -11,3 +11,4 @@ matplotlib
 torchinfo
 python-dotenv
 black
+openpyxl

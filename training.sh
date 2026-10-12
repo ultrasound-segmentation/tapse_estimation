@@ -26,7 +26,7 @@ module load Anaconda3/2025.06-1
 module load Python/3.12.3-GCCcore-13.3.0
 source .venv/bin/activate
 python twod/training.py \
-    --model ResNet50 \
-    --epochs 2 \
+    --model monai_U-Net \
+    --epochs 25 \
     --from_scratch \
     --save_model_path twod/runs/resnet_run

@@ -174,7 +174,7 @@ for folder in os.listdir(TEST_PATH):
                 img = preprocess_images(
                     np.expand_dims(img, axis=0), model_type="U-Net", device=device
                 )
-                output = model(img.float().unsqueeze(0).to(device))
+                output = model(img.float().to(device))
                 # simple inference: no saving, just compute coordinates
                 if args.model in ["unet", "swinunetr"]:
                     _ = center_of_mass_three(output.squeeze(), thresh=THRESHOLD)
