@@ -52,6 +52,7 @@ Configure the paths in `.env`:
 DATASET_PATH="path to directory with all subdirectories with .h5 files"
 CONVERTED_DATASET_PATH="path where you want to store the converted datasets"
 DIVISION_TXT_PATH="path to the directory that defines what is training-, validation- and test-data"
+GROUND_TRUTH_EXCEL="path to ground truth excel file"
 ```
 
 Regarding the `division.txt`, the file should follow this structure: 
