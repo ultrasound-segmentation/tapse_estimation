@@ -65,6 +65,11 @@ Training:
 <path_to_h5_file_from_the_.env_DATASET_PATH-file>
 ```
 
+The script to run this division is through `setup.sh`. In order to actually do the division, simply run 
+```
+. setup.sh --division
+```
+
 ## Formatting
 
 After running the [`./requirements.txt-file`](./requirements.txt):

@@ -15,4 +15,6 @@ echo "Virtual enviroment has been updated."
 echo "Log in to wandb..."
 wandb login
 
-python twod/dataloader/dataset_division.py
+if [[ "${1:-}" == "--division" ]]; then
+    python twod/dataloader/dataset_division.py
+fi

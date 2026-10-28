@@ -12,3 +12,4 @@ torchinfo
 python-dotenv
 black
 openpyxl
+seaborn
