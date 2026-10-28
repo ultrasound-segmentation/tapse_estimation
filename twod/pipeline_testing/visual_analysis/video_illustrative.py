@@ -1,10 +1,15 @@
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
 import numpy as np
 import os
 import cv2
 import h5py
 import pandas as pd
 from PIL import ImageFont, ImageDraw, Image
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def create_video(frames_dir, output_path, df, id, black_width=400, fps=5, scale=2.0):
@@ -36,7 +41,7 @@ def create_video(frames_dir, output_path, df, id, black_width=400, fps=5, scale=
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     out = cv2.VideoWriter(output_path, fourcc, fps, frame_size)
 
-    font_path = "arial.ttf"  # Change if missing on your system
+    font_path = font_manager.findfont("Arial")  # Change if missing on your system
     font_size = 27
     font = ImageFont.truetype(font_path, font_size)
 
@@ -118,12 +123,12 @@ def create_video(frames_dir, output_path, df, id, black_width=400, fps=5, scale=
 
 
 if __name__ == "__main__":
-    prediction_excel = r"C:\Users\User\OneDrive - Politecnico di Milano\matteo onedrive\OneDrive - Politecnico di Milano\mmissana\results\results_2_frames_method\best_combination\predictions.xlsx"
-    manual_excel = r"c:\Users\User\Desktop\maesurements_jinyang.xlsx"
+    prediction_excel = "data/predictions.xlsx"
+    manual_excel = os.getenv("GROUND_TRUTH_EXCEL")
 
-    prediction_folder = r"C:\Users\User\Desktop\illustrative_video"
-    folder = r"C:\Users\User\Desktop\final_reviewed_dataset"
-    output_folder = r"C:\Users\User\Desktop\illustrative_video\videos"
+    prediction_folder = "data/predictions_path"
+    folder = os.getenv("DATASET_PATH")
+    output_folder = "data/illustrated_video"
 
     # --- Load and merge auto + manual ---
     auto_df = pd.read_excel(prediction_excel)
@@ -155,14 +160,15 @@ if __name__ == "__main__":
     frequencies = []
     for subfolder in os.listdir(folder):
         subfolder_path = os.path.join(folder, subfolder)
+        if os.path.isfile(subfolder_path):
+            continue
         for file in os.listdir(subfolder_path):
-            if "interpolated" in file:
-                file_path = os.path.join(subfolder_path, file)
-                with h5py.File(file_path, "r") as f:
-                    times = f["tissue"]["times"][()]
-                    frequency = 1 / (times[1] - times[0])
-                patients.append(subfolder)
-                frequencies.append(frequency)
+            file_path = os.path.join(subfolder_path, file)
+            with h5py.File(file_path, "r") as f:
+                times = f["tissue"]["times"][()]
+                frequency = 1 / (times[1] - times[0])
+            patients.append(subfolder)
+            frequencies.append(frequency)
 
     print(f"Patients found: {patients}")
 

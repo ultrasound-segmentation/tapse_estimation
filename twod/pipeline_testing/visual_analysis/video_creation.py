@@ -10,6 +10,10 @@ from dataloader.preprocessing import (
     resize_or_crop_image_np_nokeypoints,
 )
 
+
+from dotenv import load_dotenv
+
+load_dotenv()
 # utiliy functions to create videos from an image folder or a hdf5 file
 
 
@@ -137,21 +141,25 @@ def explore_h5(name, obj):
 
 
 if __name__ == "__main__":
-    prediction_folder = r"C:\Users\User\Desktop\test_set_with_predictions"  # path to the folders with the single frames
-    folder = r"C:\Users\User\Desktop\final_reviewed_dataset"  # path to the h5 files with requency info
-    output_folder = r"C:\Users\User\Desktop\test_set_with_predictions\videos"
+    prediction_folder = (
+        "data/predictions_path"  # path to the folders with the single frames
+    )
+    folder = os.getenv("DATASET_PATH")  # path to the h5 files with requency info
+    output_folder = "data/video"
     patients = []
     frequencies = []
     for subfolder in os.listdir(folder):
         subfolder_path = os.path.join(folder, subfolder)
+        if os.path.isfile(subfolder_path):
+            continue
+        print(f"SUBFOLDER PATH: {subfolder_path}")
         for file in os.listdir(subfolder_path):
-            if "interpolated" in file:
-                file_path = os.path.join(subfolder_path, file)
-                with h5py.File(file_path, "r") as f:
-                    times = f["tissue"]["times"][()]
-                    frequency = 1 / (times[1] - times[0])
-                patients.append(subfolder)
-                frequencies.append(frequency)
+            file_path = os.path.join(subfolder_path, file)
+            with h5py.File(file_path, "r") as f:
+                times = f["tissue"]["times"][()]
+                frequency = 1 / (times[1] - times[0])
+            patients.append(subfolder)
+            frequencies.append(frequency)
     print(f"Patients: {patients}")
     print(f"Frequencies: {frequencies}")
 
