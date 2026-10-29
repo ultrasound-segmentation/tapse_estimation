@@ -13,3 +13,4 @@ python-dotenv
 black
 openpyxl
 seaborn
+opencv-python-headless
