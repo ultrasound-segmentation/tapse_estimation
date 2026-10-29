@@ -1,5 +1,5 @@
-torch==2.12.0
-torchvision
+torch==2.5.1
+torchvision==0.20.1
 tqdm
 numpy
 monai
@@ -12,3 +12,5 @@ torchinfo
 python-dotenv
 black
 openpyxl
+seaborn
+opencv-python-headless

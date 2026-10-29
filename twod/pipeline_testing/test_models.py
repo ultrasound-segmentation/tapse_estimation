@@ -16,6 +16,10 @@ from utils.plot import save_image, save_image_ann_pred
 from postprocessing.coordinates_calculation_from_masks import center_of_mass
 from models.models import Unet
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # code to test model on annotated data, and create bocplots with the error distribution
 # the boxplots can be divided by patient or by landmark
 
@@ -54,7 +58,7 @@ def compute_keypoint_distance_stats(predictions, ground_truths):
 
 
 def process_h5_file_single(
-    file_path,
+    h5_file_path,
     model,
     device,
     save_model_path,
@@ -70,8 +74,8 @@ def process_h5_file_single(
     Processes a .h5 file frame by frame (no batching).
     """
 
-    with h5py.File(file_path, "r") as f:
-        print(f"\n--- Contents of {file_path} ---")
+    with h5py.File(h5_file_path, "r") as f:
+        print(f"\n--- Contents of {h5_file_path} ---")
 
         # def print_h5_structure(name, obj):
         #     if isinstance(obj, h5py.Dataset):
@@ -99,7 +103,7 @@ def process_h5_file_single(
     coordinates_array = np.zeros((N, 3, 2))
 
     if save_images:
-        file_name = os.path.basename(file_path).replace(".h5", "")
+        file_name = os.path.basename(h5_file_path).replace(".h5", "")
         save_path = os.path.join(save_model_path, folder, file_name)
         os.makedirs(save_path, exist_ok=True)
 
@@ -130,7 +134,7 @@ def process_h5_file_single(
                 if np.any(dists > 40):
                     bold_flag = True
                     print(
-                        f"[WARNING] Error > 40 in image {i} of file {file_path}, with an error of {dists.max()/2} mm"
+                        f"[WARNING] Error > 40 in image {i} of file {h5_file_path}, with an error of {dists.max() / 2} mm"
                     )
 
             # Save both pred (red) and ann (green)
@@ -206,15 +210,15 @@ def main():
     )
     args = parser.parse_args()
 
-    model_checkpoint = r"C:\Users\User\OneDrive - Politecnico di Milano\matteo onedrive\OneDrive - Politecnico di Milano\mmissana\relevant_data\model_weights\best_unet\best_model.pth"
-    test_path = r"C:\Users\User\Desktop\RV_followup_converted"
-    save_model_path = r"C:\Users\User\Desktop\RV_followup_predictions"
+    model_checkpoint = "checkpoints/best_model.pth"
+    test_path = os.getenv("DATASET_PATH")
+    save_model_path = "data/predictions_path"
 
     os.makedirs(save_model_path, exist_ok=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = Unet(depth=6, start_filts=16, num_residuals=0).to(device)
+    model = Unet(depth=6, start_filts=8, num_residuals=0).to(device)
     model.load_state_dict(
         torch.load(model_checkpoint, map_location=device)["model_state_dict"]
     )
@@ -240,58 +244,57 @@ def main():
             "920",
         ]:  # test set
             # if folder in ['106', '135', '141', '184', '190']: # validation set
+            print(f"fodler paths: {folder_path}")
             for file in os.listdir(folder_path):
-                if "interpolated" in file:
-                    file_path = os.path.join(folder_path, file)
-                    print(file_path)
+                file_path = os.path.join(folder_path, file)
+                print(file_path)
 
-                    coordinates_array, stats, distances = process_h5_file_single(
-                        file_path=file_path,
-                        model=model,
-                        device=device,
-                        save_model_path=save_model_path,
-                        folder=folder,
-                        save_images=args.save_images,
-                        save_annotations=args.save_annotations,  # <-- pass new arg
-                        prediction_stats=True,
-                        threshold=args.threshold,
-                        no_sudden_movements=args.no_sudden_movements,
-                        threshold_sudden=args.threshold_sudden,
-                    )
+                coordinates_array, stats, distances = process_h5_file_single(
+                    h5_file_path=file_path,
+                    model=model,
+                    device=device,
+                    save_model_path=save_model_path,
+                    folder=folder,
+                    save_images=args.save_images,
+                    save_annotations=args.save_annotations,  # <-- pass new arg
+                    prediction_stats=True,
+                    threshold=args.threshold,
+                    no_sudden_movements=args.no_sudden_movements,
+                    threshold_sudden=args.threshold_sudden,
+                )
 
-                    # Collect distances for each keypoint (default)
-                    for i in range(3):
-                        for d in distances[:, i]:
-                            all_distances.append(
-                                {
-                                    "patient": folder,  # NEW: store patient ID
-                                    "file": f"{folder}/{file}",
-                                    "kp": keypoint_names[i],
-                                    "distance": d,
-                                }
-                            )
-
-                    # Store summary stats for Excel output
-                    row = {
-                        "file": f"{folder}/{file}",
-                        "mean_global": stats["global"]["mean"],
-                        "max_global": stats["global"]["max"],
-                        "min_global": stats["global"]["min"],
-                        "std_global": stats["global"]["std"],
-                    }
-
-                    for i, kp_stats in enumerate(stats["per_point"]):
-                        row.update(
+                # Collect distances for each keypoint (default)
+                for i in range(3):
+                    for d in distances[:, i]:
+                        all_distances.append(
                             {
-                                f"mean_kp{i}": kp_stats["mean"],
-                                f"max_kp{i}": kp_stats["max"],
-                                f"min_kp{i}": kp_stats["min"],
-                                f"std_kp{i}": kp_stats["std"],
+                                "patient": folder,  # NEW: store patient ID
+                                "file": f"{folder}/{file}",
+                                "kp": keypoint_names[i],
+                                "distance": d,
                             }
                         )
 
-                    stats_list.append(row)
+                # Store summary stats for Excel output
+                row = {
+                    "file": f"{folder}/{file}",
+                    "mean_global": stats["global"]["mean"],
+                    "max_global": stats["global"]["max"],
+                    "min_global": stats["global"]["min"],
+                    "std_global": stats["global"]["std"],
+                }
 
+                for i, kp_stats in enumerate(stats["per_point"]):
+                    row.update(
+                        {
+                            f"mean_kp{i}": kp_stats["mean"],
+                            f"max_kp{i}": kp_stats["max"],
+                            f"min_kp{i}": kp_stats["min"],
+                            f"std_kp{i}": kp_stats["std"],
+                        }
+                    )
+
+                stats_list.append(row)
     # --- Save per-file stats into Excel ---
     df = pd.DataFrame(stats_list)
     avg_row = {"file": "AVERAGE"}

@@ -65,6 +65,32 @@ Training:
 <path_to_h5_file_from_the_.env_DATASET_PATH-file>
 ```
 
+# Running the pipeline 
+We have created multiple `sbatch`-scripts to make the project run easier on Idun (NTNU's super computer). The intended order is:
+
+### 1. Set up the environment
+. setup.sh
+
+### Optional: only for creating/splitting the datasets
+This is in order to actually do the division (defined in `division.txt`), simply run 
+. setup.sh --division
+
+### 2. Train the model
+sbatch training.sh
+
+### 3. Test the trained model on annotated data
+sbatch testing.sh
+
+### 4. Run inference and calculate clinical indices
+sbatch inference.sh
+
+### 5. Compare predictions with manual annotations
+sbatch validation.sh
+
+### 6. Optional: create illustrative videos
+sbatch video_creation.sh
+
+
 ## Formatting
 
 After running the [`./requirements.txt-file`](./requirements.txt):
