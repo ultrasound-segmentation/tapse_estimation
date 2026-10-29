@@ -170,27 +170,38 @@ if __name__ == "__main__":
             patients.append(subfolder)
             frequencies.append(frequency)
 
-    print(f"Patients found: {patients}")
+    available_patients = {
+        name
+        for name in os.listdir(prediction_folder)
+        if os.path.isdir(os.path.join(prediction_folder, name))
+    }
+
+    # Keep one frequency per patient and only process patients with all required data.
+    patient_frequencies = {}
+    for patient, frequency in zip(patients, frequencies):
+        patient_frequencies.setdefault(patient, frequency)
+
+    patients_to_process = [
+        patient
+        for patient in patient_frequencies
+        if patient in available_patients and int(patient) in merged.index
+    ]
+
+    print(f"Patients found in prediction folders: {patients_to_process}")
 
     # --- Create videos ---
-    for i, patient in enumerate(patients):
+    for patient in patients_to_process:
         patient_folder = os.path.join(prediction_folder, patient)
-        if not os.path.exists(patient_folder):
-            print(f"Skipping {patient}: folder not found.")
-            continue
+
         for sub in os.listdir(patient_folder):
             sub_folder = os.path.join(patient_folder, sub)
             output_video_path = os.path.join(output_folder, f"{patient}.mp4")
             os.makedirs(output_folder, exist_ok=True)
-
-            if int(patient) not in merged.index:
-                print(f"Skipping {patient}: ID not in merged DataFrame.")
-                continue
 
             create_video(
                 sub_folder,
                 output_video_path,
                 df=merged,
                 id=int(patient),
-                fps=frequencies[i],
+                fps=patient_frequencies[patient],
             )
