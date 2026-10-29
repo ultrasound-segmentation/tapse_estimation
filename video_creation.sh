@@ -1,6 +1,6 @@
 #!/bin/sh
 #SBATCH --job-name=video_creation_run
-#SBATCH --time=0-00:10:00         # format: D-HH:MM:SS
+#SBATCH --time=0-00:20:00         # format: D-HH:MM:SS
 
 #SBATCH --partition=GPUQ
 #SBATCH --gres=gpu:1
