@@ -4,12 +4,72 @@ import random
 import os
 import h5py
 import numpy as np
+from pathlib import Path
 from temporal_pipeline.augmentations.augm_3d import apply_transform
 from temporal_pipeline.utils.plot import visualize_image, VolumeViewer
 from temporal_pipeline.dataloader.preprocessing import (
     resize_or_crop_image_torch,
     apply_lut,
 )
+
+
+def load_h5_split_paths(division_path, dataset_path):
+    """Load HDF5 paths from Validation, Test, and Training sections."""
+    division_path = Path(division_path)
+    dataset_path = Path(dataset_path)
+    if not division_path.is_file():
+        raise FileNotFoundError(f"Division file not found: {division_path}")
+    if not dataset_path.is_dir():
+        raise FileNotFoundError(f"Dataset directory not found: {dataset_path}")
+
+    sections = {"Validation": [], "Test": [], "Training": []}
+    current_section = None
+    with division_path.open() as division_file:
+        for line_number, raw_line in enumerate(division_file, start=1):
+            line = raw_line.strip()
+            if not line:
+                continue
+            if line.endswith(":"):
+                if line not in sections:
+                    raise ValueError(
+                        f"Unknown division section {line!r} on line {line_number}"
+                    )
+                current_section = line
+                continue
+            if current_section is None:
+                raise ValueError(
+                    f"H5 path appears before a division section on line {line_number}"
+                )
+            path = Path(line)
+            if not path.is_absolute():
+                path = dataset_path / path
+            if path.suffix.lower() not in {".h5", ".hdf5"}:
+                raise ValueError(f"Expected an HDF5 path on line {line_number}: {line}")
+            if not path.is_file():
+                raise FileNotFoundError(f"H5 file not found: {path}")
+            sections[current_section].append(str(path))
+
+    for section, paths in sections.items():
+        if not paths:
+            raise ValueError(f"Division section {section!r} is empty")
+    return {
+        "train": sections["Training"],
+        "val": sections["Validation"],
+        "test": sections["Test"],
+    }
+
+
+def _h5_files(dataset_path):
+    if isinstance(dataset_path, (list, tuple)):
+        return [str(Path(path)) for path in dataset_path]
+    dataset_path = Path(dataset_path)
+    if not dataset_path.is_dir():
+        raise FileNotFoundError(f"Dataset directory not found: {dataset_path}")
+    return sorted(
+        str(path)
+        for path in dataset_path.rglob("*")
+        if path.is_file() and path.suffix.lower() in {".h5", ".hdf5"}
+    )
 
 
 class RandomClipDataset(Dataset):
@@ -50,25 +110,12 @@ class RandomClipDataset(Dataset):
         # initialize video lengths
         self.video_lengths = []
 
-        # extract the paths of each sequence
-        for subfolder in os.listdir(dataset_path):
-            if not subfolder.startswith("."):
-                # TODO: see if this makes sense for a publication or if it's better just to have always the same videos
-                # now they are being selected based on if one video has the right amount of frames
-                for file in os.listdir(os.path.join(dataset_path, subfolder)):
-                    if not file.startswith("."):
-                        file_path = os.path.join(dataset_path, subfolder, file)
-
-                        # exctract the number of frames in that acquisition
-                        with h5py.File(file_path, "r") as h5_file:
-                            T = h5_file["annotations"].shape[0]
-
-                        # check if the acquisition has enough frames
-                        if T >= self.clip_length:
-                            # if so, then append the path and the length in two lists,
-                            # to use them in the __getitem__ function
-                            self.video_lengths.append(T)
-                            self.video_files.append(file_path)
+        for file_path in _h5_files(dataset_path):
+            with h5py.File(file_path, "r") as h5_file:
+                T = h5_file["annotations"].shape[0]
+            if T >= self.clip_length:
+                self.video_lengths.append(T)
+                self.video_files.append(file_path)
 
     def _apply_moving_average(self, annotations, window_size):
         """Apply moving average smoothing to annotations across time.
@@ -185,25 +232,12 @@ class RandomClipDatasetForActivationMethod(Dataset):
         # initialize video lengths
         self.video_lengths = []
 
-        # extract the paths of each sequence
-        for subfolder in os.listdir(dataset_path):
-            if not subfolder.startswith("."):
-                # TODO: see if this makes sense for a publication or if it's better just to have always the same videos
-                # now they are being selected based on if one video has the right amount of frames
-                for file in os.listdir(os.path.join(dataset_path, subfolder)):
-                    if not file.startswith("."):
-                        file_path = os.path.join(dataset_path, subfolder, file)
-
-                        # exctract the number of frames in that acquisition
-                        with h5py.File(file_path, "r") as h5_file:
-                            T = h5_file["annotations"].shape[0]
-
-                        # check if the acquisition has enough frames
-                        if T >= self.clip_length:
-                            # if so, then append the path and the length in two lists,
-                            # to use them in the __getitem__ function
-                            self.video_lengths.append(T)
-                            self.video_files.append(file_path)
+        for file_path in _h5_files(dataset_path):
+            with h5py.File(file_path, "r") as h5_file:
+                T = h5_file["annotations"].shape[0]
+            if T >= self.clip_length:
+                self.video_lengths.append(T)
+                self.video_files.append(file_path)
 
     def _apply_moving_average(self, annotations, window_size):
         """Apply moving average smoothing to annotations across time.
@@ -361,14 +395,7 @@ class ValidationDataset(Dataset):
 
         self.clip_indices = []  # List of (video_idx, start_frame)
 
-        # Gather all video files
-        for subfolder in os.listdir(dataset_path):
-            if not subfolder.startswith("."):
-                for file in os.listdir(os.path.join(dataset_path, subfolder)):
-                    if not file.startswith("."):
-                        self.video_files.append(
-                            os.path.join(dataset_path, subfolder, file)
-                        )
+        self.video_files = _h5_files(dataset_path)
 
         # Precompute all possible (video_idx, start_frame) pairs: I have to track the idx of the
         # video and the number of clips i can obtain from that video

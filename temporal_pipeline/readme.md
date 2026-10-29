@@ -64,23 +64,22 @@ The temporal pipeline consists of these stages:
 
 ### Training and validation data
 
-The default dataset path is `data/final_reviewed_dataset_for_3d/`. It must contain
-`train/` and `val/` directories. Each split contains patient/acquisition
-subdirectories, with one or more HDF5 files in each subdirectory:
+The temporal trainer uses the same split-file approach as the 2D pipeline. Set
+`DATASET_PATH` to the directory containing the HDF5 files and
+`DIVISION_TXT_PATH` to the split file (both can be placed in `.env`). The split
+file contains `Validation:`, `Test:`, and `Training:` sections with HDF5 paths
+relative to `DATASET_PATH`, or absolute paths:
 
 ```text
-data/final_reviewed_dataset_for_3d/
-├── train/
-│   ├── patient_001/
-│   │   └── acquisition.h5
-│   └── ...
-└── val/
-    ├── patient_002/
-    │   └── acquisition.h5
-    └── ...
+data/division.txt
+DATASET_PATH/
+├── patient_001/
+│   └── acquisition.h5
+└── ...
 ```
 
-Each training HDF5 file must contain:
+Run training with `--dataset_path` and `--division_path` to override the
+environment values. Each selected training HDF5 file must contain:
 
 - `frames`: ultrasound frames stored as `height × width × time`
 - `annotations`: landmark coordinates stored as `time × 3 × 2`
@@ -140,7 +139,7 @@ Example using the default 3D U-Net:
 
 ```bash
 python temporal_pipeline/training/temporal_train.py \
-  --dataset_path data/final_reviewed_dataset_for_3d \
+  --division_path data/division.txt \
   --model 3D_UNet \
   --window_len 32 \
   --batch_size 4 \

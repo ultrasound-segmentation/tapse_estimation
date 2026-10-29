@@ -6,12 +6,14 @@ import random
 import os
 import wandb  # Import wandb
 import h5py
+from dotenv import load_dotenv
 
 # TODO:maybe u have to set numpy seed if a run differs from the same one
 from temporal_pipeline.dataloader.data_prep import (
     RandomClipDataset,
     ValidationDataset,
     RandomClipDatasetForActivationMethod,
+    load_h5_split_paths,
 )
 from temporal_pipeline.models.models import UNet3D, EncoderDecoder_3d
 from temporal_pipeline.losses.distances import CombinedLossPenalty, CombinedLandmarkLoss
@@ -21,6 +23,8 @@ from temporal_pipeline.losses.heatmap_losses import (
 )
 from temporal_pipeline.training.trainer import Trainer
 from temporal_pipeline.utils.save import get_experiment_path
+
+load_dotenv()
 
 """ script for training"""
 
@@ -42,8 +46,14 @@ def parse_args():
     parser.add_argument(
         "--dataset_path",
         type=str,
-        default="data/final_reviewed_dataset_for_3d/",
-        help="Path of the dataset, divided into /train/, /val/ and /test/",
+        default=os.getenv("DATASET_PATH"),
+        help="Root directory containing the HDF5 files listed in --division_path",
+    )
+    parser.add_argument(
+        "--division_path",
+        type=str,
+        default=os.getenv("DIVISION_TXT_PATH", "data/division.txt"),
+        help="Text file defining Validation, Test, and Training HDF5 files",
     )
     parser.add_argument(
         "--epochs", type=int, default=300, help="Number of training epochs"
@@ -203,8 +213,13 @@ def main():
             },
         )
 
-    train_path = os.path.join(args.dataset_path, "train")
-    val_path = os.path.join(args.dataset_path, "val")
+    if not args.dataset_path:
+        raise ValueError(
+            "--dataset_path is required, or DATASET_PATH must be set in .env"
+        )
+    split_paths = load_h5_split_paths(args.division_path, args.dataset_path)
+    train_path = split_paths["train"]
+    val_path = split_paths["val"]
 
     if args.heatmap_training:
         # if the model outputs heatmap, the point coordinates need to be given in the form of

@@ -563,6 +563,8 @@ class Predictor:
 
             thresholded_coordinates_array = thresholded_coordinates_array.squeeze(0)
 
+            print("(Thresholded) coordinate shape: " + str(thresholded_coordinates_array.shape))
+
             # calculate the indices from the predicted coordinates
             self.calculate_indices(thresholded_coordinates_array)
 
